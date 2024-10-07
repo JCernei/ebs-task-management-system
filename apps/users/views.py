@@ -1,10 +1,12 @@
 from django.contrib.auth.models import User
+from rest_framework.generics import ListAPIView
 from rest_framework.generics import GenericAPIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework_simplejwt.views import TokenObtainPairView
 
-from apps.users.serializers import UserSerializer
+from apps.users.serializers import UserSerializer, UserListSerializer
 
 
 class RegisterUserView(GenericAPIView):
@@ -33,3 +35,16 @@ class RegisterUserView(GenericAPIView):
         user.save()
 
         return Response(self.serializer_class(user).data)
+
+
+class LoginView(TokenObtainPairView):
+    """
+    Login endpoint to authenticate a user and return JWT tokens.
+    """
+    pass  # This will use the default TokenObtainPairSerializer to handle login.
+
+
+class UserListView(ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserListSerializer
+    permission_classes = [IsAuthenticated]
