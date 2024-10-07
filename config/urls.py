@@ -8,7 +8,7 @@ urlpatterns = [
     path("schema", SpectacularAPIView.as_view(), name="schema"),
     path("redoc", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path('admin/', admin.site.urls),
-    path("tasks/", include("apps.tasks.urls")),
+    path("", include("apps.tasks.urls")),
     path("common/", include("apps.common.urls")),
     path("users/", include("apps.users.urls")),
 ]
