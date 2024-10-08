@@ -2,6 +2,7 @@ from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveAPIV
 from rest_framework.permissions import IsAuthenticated
 from apps.tasks.serializers import TaskSerializer, TaskDetailSerializer, SimpleTaskSerializer
 from .models import Task
+from django.contrib.auth.models import User
 
 
 class TaskListCreateView(ListCreateAPIView):
@@ -18,7 +19,10 @@ class TaskListCreateView(ListCreateAPIView):
 
     # Define behavior for POST requests (create task)
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)  # Assign the task to the current user
+        serializer.save(
+            created_by=self.request.user,
+            assigned_to=self.request.user
+        )
 
 
 class UserTasksView(ListAPIView):
@@ -28,7 +32,8 @@ class UserTasksView(ListAPIView):
     # Filter tasks to only return those assigned to the user in the URL
     def get_queryset(self):
         user_id = self.kwargs['pk']
-        return Task.objects.filter(user_id=user_id)
+        user = get_object_or_404(User, pk=user_id)
+        return Task.objects.filter(assigned_to=user)
 
 
 class TaskDetailView(RetrieveAPIView):
