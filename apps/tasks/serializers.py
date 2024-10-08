@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Task
+from django.contrib.auth.models import User
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -24,8 +25,16 @@ class TaskDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'is_completed', 'owner', 'executor']
 
 
-class TaskAssigneeUpdateSerializer(serializers.ModelSerializer):
+class TaskUpdateSerializer(serializers.ModelSerializer):
+    assigned_to = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        required=False  # Make this field optional
+    )
+    is_completed = serializers.BooleanField(
+        required=False  # Make this field optional
+    )
+
     class Meta:
         model = Task
-        fields = ['id', 'title', 'assigned_to']
+        fields = ['id', 'title', 'assigned_to', 'is_completed']
         read_only_fields = ['id', 'title']
