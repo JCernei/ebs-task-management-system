@@ -17,24 +17,24 @@ class SimpleTaskSerializer(serializers.ModelSerializer):
 
 
 class TaskDetailSerializer(serializers.ModelSerializer):
-    owner = serializers.CharField(source='created_by.get_full_name', read_only=True)
-    executor = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
+    owner_name = serializers.CharField(source='owner.get_full_name', read_only=True)
+    executor_name = serializers.CharField(source='executor.get_full_name', read_only=True)
 
     class Meta:
         model = Task
-        fields = ['id', 'title', 'description', 'is_completed', 'owner', 'executor']
+        fields = ['id', 'title', 'description', 'is_completed', 'owner_name', 'executor_name']
 
 
 class TaskUpdateSerializer(serializers.ModelSerializer):
-    assigned_to = serializers.PrimaryKeyRelatedField(
+    executor = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
-        required=False  # Make this field optional
+        required=False
     )
     is_completed = serializers.BooleanField(
-        required=False  # Make this field optional
+        required=False
     )
 
     class Meta:
         model = Task
-        fields = ['id', 'title', 'assigned_to', 'is_completed']
+        fields = ['id', 'title', 'executor', 'is_completed']
         read_only_fields = ['id', 'title']

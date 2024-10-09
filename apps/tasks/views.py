@@ -45,8 +45,8 @@ class TaskListCreateView(ListCreateAPIView):
     # Define behavior for POST requests (create task)
     def perform_create(self, serializer):
         serializer.save(
-            created_by=self.request.user,
-            assigned_to=self.request.user
+            owner=self.request.user,
+            executor=self.request.user
         )
 
 
@@ -69,7 +69,7 @@ class UserTaskListView(ListAPIView):
     def get_queryset(self):
         user_id = self.kwargs['pk']
         user = get_object_or_404(User, pk=user_id)
-        queryset = Task.objects.filter(assigned_to=user)
+        queryset = Task.objects.filter(executor=user)
 
         completed = self.request.query_params.get('completed', None)
         if completed is not None:
@@ -87,6 +87,8 @@ class TaskDetailUpdateDeleteView(RetrieveUpdateDestroyAPIView):
             return TaskDetailSerializer
         elif self.request.method in ['PATCH', 'PUT']:
             return TaskUpdateSerializer
+        elif self.request.method == 'DELETE':
+            return TaskDetailSerializer
         return super().get_serializer_class()
 
     def get_object(self):
@@ -104,10 +106,10 @@ class TaskDetailUpdateDeleteView(RetrieveUpdateDestroyAPIView):
         serializer.is_valid(raise_exception=True)
 
         # Update the task fields only if provided in the request
-        if 'assigned_to' in request.data:
-            user_id = request.data['assigned_to']
+        if 'executor' in request.data:
+            user_id = request.data['executor']
             assigned_user = get_object_or_404(User, id=user_id)
-            task.assigned_to = assigned_user
+            task.executor = assigned_user
 
         if 'is_completed' in request.data:
             task.is_completed = request.data['is_completed']
@@ -123,7 +125,7 @@ class TaskDetailUpdateDeleteView(RetrieveUpdateDestroyAPIView):
 
     def get_assigned_user(self, request: Request) -> Optional[User]:
         """Helper function to retrieve the assigned user from the request."""
-        user_id = request.data.get('assigned_to')
+        user_id = request.data.get('executor')
         if user_id:
             return get_object_or_404(User, id=user_id)
         return None
