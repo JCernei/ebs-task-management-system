@@ -1,38 +1,43 @@
 from rest_framework import serializers
 from .models import Task
-from django.contrib.auth.models import User
+from apps.users.models import User
+from apps.users.serializers import UserSerializer
 
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ['id', 'title', 'description', 'is_completed']
-        read_only_fields = ['id', 'is_completed']
+        fields = '__all__'
 
 
-class SimpleTaskSerializer(serializers.ModelSerializer):
+class TaskCreateSerializer(serializers.ModelSerializer):
+    owner = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+    executor = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Task
+        fields = '__all__'
+        read_only_fields = ['is_completed']
+
+
+class TaskListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = ['id', 'title']
 
 
 class TaskDetailSerializer(serializers.ModelSerializer):
-    owner_name = serializers.CharField(source='owner.get_full_name', read_only=True)
-    executor_name = serializers.CharField(source='executor.get_full_name', read_only=True)
+    owner = UserSerializer(read_only=True)
+    executor = UserSerializer(read_only=True)
 
     class Meta:
         model = Task
-        fields = ['id', 'title', 'description', 'is_completed', 'owner_name', 'executor_name']
+        fields = '__all__'
 
 
 class TaskUpdateSerializer(serializers.ModelSerializer):
-    executor = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
-        required=False
-    )
-    is_completed = serializers.BooleanField(
-        required=False
-    )
+    executor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
+    is_completed = serializers.BooleanField(required=False)
 
     class Meta:
         model = Task
