@@ -1,11 +1,11 @@
-from django.contrib.auth.models import User
 from rest_framework.generics import ListAPIView
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
-
+from rest_framework_simplejwt.tokens import RefreshToken
+from apps.users.models import User
 from apps.users.serializers import UserSerializer, UserListSerializer
 
 
@@ -34,7 +34,13 @@ class RegisterUserView(GenericAPIView):
         user.set_password(password)
         user.save()
 
-        return Response(self.serializer_class(user).data)
+        # Generate JWT token
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        })
 
 
 class LoginView(TokenObtainPairView):

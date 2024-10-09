@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Third party apps
     "rest_framework",
-    # "rest_framework.authtoken",
+    "rest_framework_simplejwt",
     # "corsheaders",
     "drf_spectacular",
     # Local apps
@@ -99,6 +99,9 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+
+AUTH_USER_MODEL = 'users.User'
 
 
 # Password validation
