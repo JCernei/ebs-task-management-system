@@ -11,7 +11,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Task.objects.all()
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['is_completed']
+    filterset_fields = ['is_completed', 'executor']
 
     def get_serializer_class(self):
         if self.action == 'list':
