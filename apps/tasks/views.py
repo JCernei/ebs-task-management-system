@@ -1,4 +1,5 @@
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -12,8 +13,9 @@ from apps.tasks.serializers import TaskSerializer, TaskDetailSerializer, TaskLis
 class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     queryset = Task.objects.all()
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['is_completed', 'executor']
+    search_fields = ['title']
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -43,5 +45,5 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
-        serializer.save(task=task, **validated_data)  # Set task and user
+        serializer.save(task=task, **validated_data)
         return Response(serializer.data, status=201)
