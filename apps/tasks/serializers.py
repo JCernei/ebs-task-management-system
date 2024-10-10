@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from .models import Task
+
 from apps.users.models import User
 from apps.users.serializers import UserSerializer
+from apps.tasks.models import Task
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -11,8 +12,9 @@ class TaskSerializer(serializers.ModelSerializer):
 
 
 class TaskCreateSerializer(serializers.ModelSerializer):
-    owner = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
-    executor = serializers.PrimaryKeyRelatedField(read_only=True, default=serializers.CurrentUserDefault())
+    owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    executor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), default=serializers.CurrentUserDefault(),
+                                                  required=False)
 
     class Meta:
         model = Task
@@ -36,8 +38,8 @@ class TaskDetailSerializer(serializers.ModelSerializer):
 
 
 class TaskUpdateSerializer(serializers.ModelSerializer):
-    executor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
     is_completed = serializers.BooleanField(required=False)
+    executor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
 
     class Meta:
         model = Task
