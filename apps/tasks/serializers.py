@@ -1,8 +1,8 @@
 from rest_framework import serializers
 
+from apps.tasks.models import Task, Comment
 from apps.users.models import User
 from apps.users.serializers import UserSerializer
-from apps.tasks.models import Task
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -45,3 +45,23 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
         model = Task
         fields = ['id', 'title', 'executor', 'is_completed']
         read_only_fields = ['id', 'title']
+
+
+class CommentCreateSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'text', 'user', 'task']
+        read_only_fields = ['user', 'task']
+
+    def to_representation(self, instance):
+        return {'id': instance.id}
+
+
+class CommentListSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'text', 'user', 'created_at']
