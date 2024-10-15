@@ -1,6 +1,7 @@
+from django.utils import timezone
 from rest_framework import serializers
 
-from apps.tasks.models import Task, Comment
+from apps.tasks.models import Task, Comment, TimeLog
 from apps.users.models import User
 from apps.users.serializers import UserSerializer
 
@@ -65,3 +66,47 @@ class CommentListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'text', 'user', 'created_at']
+
+
+class TimeLogStartSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    start_time = serializers.DateTimeField(default=timezone.now)
+    date = serializers.DateField(default=timezone.now().date)
+    note = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = TimeLog
+        fields = ['date', 'start_time', 'note', 'user']
+        read_only_fields = ['date', 'start_time']
+
+
+class TimeLogStopSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    end_time = serializers.DateTimeField(default=timezone.now)
+    duration = serializers.DurationField(required=False, allow_null=True)
+    note = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = TimeLog
+        fields = ['end_time', 'duration', 'note', 'user']
+        read_only_fields = ['duration', 'end_time']
+
+
+class TimeLogListSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = TimeLog
+        fields = ['id', 'duration', 'note', 'date', 'user']
+
+
+class TimeLogCreateSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    date = serializers.DateField()
+    duration = serializers.IntegerField()
+    note = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = TimeLog
+        fields = ['id', 'duration', 'note', 'date', 'user', 'task']
+        read_only_fields = ['id', 'user', 'task']
