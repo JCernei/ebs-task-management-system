@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Sum, DurationField, ExpressionWrapper, F
 
 from apps.users.models import User
 
@@ -9,6 +10,15 @@ class Task(models.Model):
     is_completed = models.BooleanField(default=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='task_owner', null=True, editable=False)
     executor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='task_executor', null=True)
+
+    @property
+    def logged_time(self):
+        total_duration = self.time_logs.aggregate(
+            total_duration=Sum(
+                ExpressionWrapper(F('duration'), output_field=DurationField())
+            )
+        )['total_duration']
+        return total_duration.total_seconds() // 60 if total_duration else 0
 
     def __str__(self):
         return self.title
