@@ -11,10 +11,12 @@ STATUS_COMPLETED = 'completed'
 @receiver(pre_save, sender=Task)
 def capture_old_task_state(sender, instance, **kwargs):
     if instance.pk:
-        old_task = Task.objects.get(pk=instance.pk)
-        instance._old_executor = old_task.executor
-        instance._old_status = old_task.status
-
+        try:
+            old_task = Task.objects.get(pk=instance.pk)
+            instance._old_executor = old_task.executor
+            instance._old_status = old_task.status
+        except Task.DoesNotExist:
+            pass
 
 @receiver(post_save, sender=Task)
 def send_task_assigned_notification(sender, instance, created, **kwargs):
