@@ -19,6 +19,7 @@ psycopg2-binary = "^2.9.10"
 faker = "^30.8.1"
 setuptools = "^75.3.0"
 gunicorn = "^23.0.0"
+coverage = "^7.6.3"
 
 
 [build-system]
