@@ -9,9 +9,12 @@ from apps.tasks.utils.email_notifications import send_task_assigned_email, send_
 @receiver(pre_save, sender=Task)
 def capture_old_task_state(sender, instance, **kwargs):
     if instance.pk:
-        old_task = Task.objects.get(pk=instance.pk)
-        instance._old_executor = old_task.executor
-        instance._was_completed = old_task.is_completed
+        try:
+            old_task = Task.objects.get(pk=instance.pk)
+            instance._old_executor = old_task.executor
+            instance._was_completed = old_task.is_completed
+        except Task.DoesNotExist:
+            pass
 
 
 @receiver(post_save, sender=Task)

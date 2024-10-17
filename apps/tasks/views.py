@@ -46,7 +46,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             return TimeLogCreateSerializer
         return TaskSerializer
 
-    @action(detail=True, url_path='comments', url_name='task_comments')
+    @action(detail=True, url_path='comments', url_name='comments')
     def list_comment(self, request, pk=None):
         task = self.get_object()
         comments = Comment.objects.filter(task=task)
@@ -62,7 +62,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer.save(task=task, **validated_data)
         return Response(serializer.data, status=201)
 
-    @action(detail=True, url_path='logs', url_name='task_logs')
+    @action(detail=True, url_path='logs', url_name='logs')
     def list_logs(self, request, pk=None):
         task = self.get_object()
         logs = TimeLog.objects.filter(task=task)
@@ -91,7 +91,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         )
         return Response(serializer.data, status=201)
 
-    @action(detail=True, methods=['post'], url_path='logs/start', url_name='task_logs')
+    @action(detail=True, methods=['post'], url_path='logs/start', url_name='logs-start')
     def start_timer(self, request, pk=None):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -99,6 +99,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         task = self.get_object()
 
+<<<<<<< HEAD
         active_timer_exists = TimeLog.objects.filter(task=task, user=validated_data['user'],
                                                      end_time__isnull=True).exists()
         if active_timer_exists:
@@ -106,8 +107,12 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         TimeLog.objects.create(task=task, start_time=timezone.now(), **validated_data)
         return Response(serializer.data, status=201)
+=======
+        TimeLog.objects.create(task=task, **validated_data)
+        return Response(serializer.data, status=200)
+>>>>>>> da2e608 (Add unit tests for tasks endpoints)
 
-    @action(detail=True, methods=['post'], url_path='logs/stop', url_name='task_logs')
+    @action(detail=True, methods=['post'], url_path='logs/stop', url_name='logs-stop')
     def stop_timer(self, request, pk=None):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -126,7 +131,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         active_timer.save()
         serializer = self.get_serializer(active_timer)
-        return Response(serializer.data)
+        return Response(serializer.data, status=200)
 
 
 class ReportViewSet(viewsets.GenericViewSet):
