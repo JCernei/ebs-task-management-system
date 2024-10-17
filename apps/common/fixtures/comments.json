@@ -1,0 +1,22 @@
+[
+  {
+    "model": "tasks.comment",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "task": 1,
+      "text": "This needs to be resolved ASAP.",
+      "created_at": "2024-10-17T10:00:00Z"
+    }
+  },
+  {
+    "model": "tasks.comment",
+    "pk": 2,
+    "fields": {
+      "user": 2,
+      "task": 2,
+      "text": "API design looks good.",
+      "created_at": "2024-10-16T09:30:00Z"
+    }
+  }
+]
