@@ -50,7 +50,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             return TaskReportSerializer
         return TaskSerializer
 
-    @action(detail=True, url_path='comments', url_name='task_comments')
+    @action(detail=True, url_path='comments', url_name='comments')
     def list_comment(self, request, pk=None):
         task = self.get_object()
         comments = Comment.objects.filter(task=task)
@@ -66,7 +66,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer.save(task=task, **validated_data)
         return Response(serializer.data, status=201)
 
-    @action(detail=True, url_path='logs', url_name='task_logs')
+    @action(detail=True, url_path='logs', url_name='logs')
     def list_logs(self, request, pk=None):
         task = self.get_object()
         logs = TimeLog.objects.filter(task=task)
@@ -99,7 +99,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         )
         return Response(serializer.data, status=201)
 
-    @action(detail=True, methods=['post'], url_path='logs/start', url_name='task_logs')
+    @action(detail=True, methods=['post'], url_path='logs/start', url_name='logs-start')
     def start_timer(self, request, pk=None):
         task = self.get_object()
 
@@ -113,9 +113,9 @@ class TaskViewSet(viewsets.ModelViewSet):
                             status=400)
 
         TimeLog.objects.create(task=task, **validated_data)
-        return Response(serializer.data, status=201)
+        return Response(serializer.data, status=200)
 
-    @action(detail=True, methods=['post'], url_path='logs/stop', url_name='task_logs')
+    @action(detail=True, methods=['post'], url_path='logs/stop', url_name='logs-stop')
     def stop_timer(self, request, pk=None):
         task = self.get_object()
         note = request.data.get('note')
@@ -138,7 +138,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         active_timer.save()
         serializer = self.get_serializer(active_timer)
-        return Response(serializer.data)
+        return Response(serializer.data, status=200)
 
     @extend_schema(
         parameters=[
@@ -149,7 +149,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                              type=OpenApiTypes.STR),
         ],
     )
-    @action(detail=False, methods=['get'], url_path='reports', url_name='task_reports')
+    @action(detail=False, methods=['get'], url_path='reports', url_name='reports')
     def retrieve_report(self, request):
         user = request.user
         time_logs = TimeLog.objects.filter(user=user)
