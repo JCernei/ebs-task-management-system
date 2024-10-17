@@ -7,6 +7,7 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APIClient
 
 from apps.common.middlewares import ApiMiddleware
+from apps.users.models import User
 
 
 class TestCommon(TestCase):
@@ -15,7 +16,7 @@ class TestCommon(TestCase):
     def setUp(self) -> None:
         self.client = APIClient()
         # check data in fixture json file
-        self.test_user1 = User.objects.get(email="user1@email.com")
+        self.test_user1 = User.objects.get(pk=1)
 
     def test_health_view(self) -> None:
         response = self.client.get(reverse("health_view"))
