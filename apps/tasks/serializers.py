@@ -24,9 +24,6 @@ class TaskCreateSerializer(serializers.ModelSerializer):
 
 
 class TaskListSerializer(serializers.ModelSerializer):
-    logged_time = serializers.IntegerField()
-    id = serializers.IntegerField()
-
     class Meta:
         model = Task
         fields = ['id', 'title', 'logged_time']
@@ -113,6 +110,12 @@ class TimeLogCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'task']
 
 
-class TaskReportSerializer(serializers.Serializer):
+class ReportTaskListSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    title = serializers.CharField()
+    logged_time = serializers.IntegerField()
+
+
+class ReportSerializer(serializers.Serializer):
     total_logged_time = serializers.IntegerField()
-    tasks = TaskListSerializer(many=True)
+    tasks = ReportTaskListSerializer(many=True)

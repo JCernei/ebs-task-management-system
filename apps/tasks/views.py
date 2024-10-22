@@ -13,7 +13,7 @@ from apps.tasks.models import Task, Comment, TimeLog
 from apps.tasks.serializers import TaskSerializer, TaskDetailSerializer, TaskListSerializer, \
     TaskUpdateSerializer, TaskCreateSerializer, CommentCreateSerializer, CommentListSerializer, \
     TimeLogListSerializer, TimeLogCreateSerializer, TimeLogStartSerializer, TimeLogStopSerializer, \
-    TaskReportSerializer
+    ReportSerializer, ReportTaskListSerializer
 from apps.tasks.utils.task_report_helpers import filter_time_logs_by_time_interval, apply_top_limit, \
     calculate_total_logged_time
 
@@ -47,7 +47,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         elif self.action == 'create_logs':
             return TimeLogCreateSerializer
         elif self.action == 'retrieve_report':
-            return TaskReportSerializer
+            return ReportSerializer
         return TaskSerializer
 
     @action(detail=True, url_path='comments', url_name='task_comments')
@@ -172,7 +172,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         # Use the serializer to format the task data
         tasks = [
-            TaskListSerializer({
+            ReportTaskListSerializer({
                 'id': task['task__id'],
                 'title': task['task__title'],
                 'logged_time': task['total_duration'].total_seconds() // 60 if task['total_duration'] else 0
@@ -187,7 +187,4 @@ class TaskViewSet(viewsets.ModelViewSet):
             'tasks': tasks
         }
 
-        serializer = self.get_serializer(data=response_data)
-        serializer.is_valid(raise_exception=True)
-
-        return Response(serializer.data)
+        return Response(response_data)
