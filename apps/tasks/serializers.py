@@ -32,6 +32,7 @@ class TaskListSerializer(serializers.ModelSerializer):
 class TaskDetailSerializer(serializers.ModelSerializer):
     owner = UserSerializer(read_only=True)
     executor = UserSerializer(read_only=True)
+    logged_time = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Task
@@ -68,46 +69,39 @@ class CommentListSerializer(serializers.ModelSerializer):
 
 class TimeLogStartSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    start_time = serializers.DateTimeField(default=timezone.now)
-    date = serializers.DateField(default=timezone.now().date)
     note = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = TimeLog
-        fields = ['date', 'start_time', 'note', 'user']
-        read_only_fields = ['date', 'start_time']
+        fields = ['start_time', 'note', 'user']
+        read_only_fields = ['start_time']
 
 
 class TimeLogStopSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    end_time = serializers.DateTimeField(default=timezone.now)
-    duration = serializers.DurationField(required=False, allow_null=True)
     note = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = TimeLog
-        fields = ['end_time', 'duration', 'note', 'user']
-        read_only_fields = ['duration', 'end_time']
+        fields = ['end_time', 'note', 'user']
+        read_only_fields = ['end_time']
 
 
 class TimeLogListSerializer(serializers.ModelSerializer):
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-
     class Meta:
         model = TimeLog
-        fields = ['id', 'duration', 'note', 'date', 'user']
+        fields = '__all__'
 
 
 class TimeLogCreateSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    date = serializers.DateField()
+    end_time = serializers.DateTimeField(required=False, default=timezone.now)
     duration = serializers.IntegerField()
     note = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = TimeLog
-        fields = ['id', 'duration', 'note', 'date', 'user', 'task']
-        read_only_fields = ['id', 'user', 'task']
+        fields = ['duration', 'note', 'end_time', 'user']
 
 
 class ReportTaskListSerializer(serializers.Serializer):

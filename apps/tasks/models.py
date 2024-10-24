@@ -12,7 +12,7 @@ class Task(models.Model):
     executor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='task_executor', null=True)
 
     @property
-    def logged_time(self):
+    def logged_time(self) -> int:
         total_duration = self.time_logs.aggregate(
             total_duration=Sum(
                 ExpressionWrapper(F('duration'), output_field=DurationField())
@@ -40,8 +40,13 @@ class TimeLog(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
     note = models.TextField(null=True, blank=True)
-    date = models.DateField()
-    duration = models.DurationField(null=True, blank=True)
+    duration = models.GeneratedField(
+        expression=F('end_time') - F('start_time'),
+        output_field=DurationField(),
+        db_persist=True,
+        null=True,
+        blank=True,
+    )
 
     def __str__(self):
-        return f'{self.user} - {self.task.title} on {self.date}'
+        return f'{self.user} - {self.task.title} on {self.start_time}'
