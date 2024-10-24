@@ -99,7 +99,6 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         task = self.get_object()
 
-<<<<<<< HEAD
         active_timer_exists = TimeLog.objects.filter(task=task, user=validated_data['user'],
                                                      end_time__isnull=True).exists()
         if active_timer_exists:
@@ -107,10 +106,6 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         TimeLog.objects.create(task=task, start_time=timezone.now(), **validated_data)
         return Response(serializer.data, status=201)
-=======
-        TimeLog.objects.create(task=task, **validated_data)
-        return Response(serializer.data, status=200)
->>>>>>> da2e608 (Add unit tests for tasks endpoints)
 
     @action(detail=True, methods=['post'], url_path='logs/stop', url_name='logs-stop')
     def stop_timer(self, request, pk=None):
