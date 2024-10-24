@@ -35,8 +35,8 @@ class Comment(models.Model):
 
 
 class TimeLog(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='time_logs')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    task = models.ForeignKey(Task, on_delete=models.SET_NULL, null=True , related_name='time_logs')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True , related_name='user_time_logs')
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
     note = models.TextField(null=True, blank=True)
