@@ -30,11 +30,11 @@ def send_task_assigned_notification(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Comment)
 def send_comment_notification(sender, instance, created, **kwargs):
-    if created:
-        task = instance.task
-        commenter_name = instance.user.get_full_name()
-        comment_text = instance.text
-        send_task_commented_email(task.executor.email, task.title, commenter_name, comment_text)
+    # if created:
+    task = instance.task
+    commenter_name = instance.user.get_full_name()
+    comment_text = instance.text
+    send_task_commented_email(task.executor.email, task.title, commenter_name, comment_text)
 
 
 @receiver(post_save, sender=Task)

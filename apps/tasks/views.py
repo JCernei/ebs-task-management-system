@@ -109,7 +109,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'You already have an active timer for this task.'}, status=400)
 
         TimeLog.objects.create(task=task, start_time=timezone.now(), **validated_data)
-        return Response(serializer.data, status=200)
+        return Response(serializer.data, status=201)
 
     @action(detail=True, methods=['post'], url_path='logs/stop', url_name='logs-stop')
     def stop_timer(self, request, pk=None):
@@ -122,11 +122,12 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         active_timer.end_time = timezone.now()
 
-        note = validated_data['note']
-        if active_timer.note:
-            active_timer.note += f"\n{note}"
-        else:
-            active_timer.note = note
+        note = validated_data.get('note', '')
+        if note:
+            if active_timer.note:
+                active_timer.note += f"\n{note}"
+            else:
+                active_timer.note = note
 
         active_timer.save()
         serializer = self.get_serializer(active_timer)
@@ -203,6 +204,14 @@ class ReportViewSet(viewsets.GenericViewSet):
 
     @method_decorator(cache_page(60))
     def list(self, request):
+<<<<<<< HEAD
+=======
+        data = request.GET.copy()
+        # # If no user filter provided, default to current user
+        # if 'user' not in data:
+        #     data['user'] = request.user.id
+
+>>>>>>> c23de68 (WIP)
         # Apply filters
         filterset = self.filterset_class(request.GET, queryset=self.get_queryset(), )
         if not filterset.is_valid():

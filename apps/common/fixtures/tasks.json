@@ -18,7 +18,7 @@
       "description": "Create the API to handle comments for tasks.",
       "is_completed": true,
       "owner": 1,
-      "executor": 2
+      "executor": 1
     }
   }
 ]
