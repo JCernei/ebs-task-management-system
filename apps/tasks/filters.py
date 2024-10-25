@@ -7,7 +7,7 @@ from apps.tasks.models import Task, TimeLog
 class TaskFilter(filters.FilterSet):
     class Meta:
         model = Task
-        fields = ['is_completed', 'executor']
+        fields = ['status', 'executor']
 
 
 class TimeLogFilter(filters.FilterSet):
