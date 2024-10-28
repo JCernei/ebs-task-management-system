@@ -15,9 +15,9 @@ class Task(models.Model):
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open', db_index=True)
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='task_owner', null=True, editable=False)
-    executor = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='task_executor', null=True)
+    executor = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='task_executor', null=True, db_index=True)
 
     @property
     def logged_time(self) -> int:
@@ -33,8 +33,8 @@ class Task(models.Model):
 
 
 class Comment(models.Model):
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, db_index=True)
+    task = models.ForeignKey('Task', on_delete=models.CASCADE, related_name='comments', db_index=True)
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -43,8 +43,8 @@ class Comment(models.Model):
 
 
 class TimeLog(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.SET_NULL, null=True , related_name='time_logs')
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True , related_name='user_time_logs')
+    task = models.ForeignKey(Task, on_delete=models.SET_NULL, null=True , related_name='time_logs', db_index=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True , related_name='user_time_logs', db_index=True)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
     note = models.TextField(null=True, blank=True)

@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db.models import Sum, F, ExpressionWrapper, DurationField
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -199,10 +200,16 @@ class ReportViewSet(viewsets.GenericViewSet):
 
     def list(self, request):
         data = request.GET.copy()
-        # If no user filter provided, default to current user
-        if 'user' not in data:
-            data['user'] = request.user.id
 
+        # Generate a unique cache key based on user ID and filter parameters
+        cache_key = f'top_tasks_{request.user.id}_{"_".join(data.items())}'
+
+        # Try to retrieve data from cache
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return Response(cached_data)
+
+        print("Cache not found")
         # Apply filters
         filterset = self.filterset_class(data, queryset=self.get_queryset(), )
         if not filterset.is_valid():
@@ -218,6 +225,9 @@ class ReportViewSet(viewsets.GenericViewSet):
             'total_logged_time': self._get_total_duration(queryset),
             'tasks': self._format_task_data(tasks_with_time)
         }
+
+        # Cache the response data for 1 minute
+        cache.set(cache_key, response_data, timeout=60)
 
         serializer = self.get_serializer(response_data)
         return Response(serializer.data)
