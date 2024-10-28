@@ -1,6 +1,7 @@
-from django.core.cache import cache
 from django.db.models import Sum, F, ExpressionWrapper, DurationField
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from rest_framework import viewsets
@@ -23,6 +24,8 @@ class TaskViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = TaskFilter
     search_fields = ['title']
+
+    # pagination_class = PageNumberPagination
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -198,20 +201,10 @@ class ReportViewSet(viewsets.GenericViewSet):
             return 0
         return duration.total_seconds() // 60
 
+    @method_decorator(cache_page(60))
     def list(self, request):
-        data = request.GET.copy()
-
-        # Generate a unique cache key based on user ID and filter parameters
-        cache_key = f'top_tasks_{request.user.id}_{"_".join(data.items())}'
-
-        # Try to retrieve data from cache
-        cached_data = cache.get(cache_key)
-        if cached_data is not None:
-            return Response(cached_data)
-
-        print("Cache not found")
         # Apply filters
-        filterset = self.filterset_class(data, queryset=self.get_queryset(), )
+        filterset = self.filterset_class(request.GET, queryset=self.get_queryset(), )
         if not filterset.is_valid():
             return Response(filterset.errors, status=400)
 
@@ -225,9 +218,6 @@ class ReportViewSet(viewsets.GenericViewSet):
             'total_logged_time': self._get_total_duration(queryset),
             'tasks': self._format_task_data(tasks_with_time)
         }
-
-        # Cache the response data for 1 minute
-        cache.set(cache_key, response_data, timeout=60)
 
         serializer = self.get_serializer(response_data)
         return Response(serializer.data)
