@@ -20,7 +20,7 @@ from apps.tasks.serializers import TaskSerializer, TaskDetailSerializer, TaskLis
 
 class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Task.objects.all()
+    queryset = Task.objects.all().order_by('id')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = TaskFilter
     search_fields = ['title']
@@ -135,7 +135,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 class ReportViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = TimeLog.objects.all()
+    queryset = TimeLog.objects.all().order_by('id')
     filter_backends = [DjangoFilterBackend]
     filterset_class = TimeLogFilter
     serializer_class = ReportSerializer
@@ -214,10 +214,19 @@ class ReportViewSet(viewsets.GenericViewSet):
         tasks_with_time = self._get_tasks_with_duration(queryset, filterset)
 
         # Prepare response data
-        response_data = {
-            'total_logged_time': self._get_total_duration(queryset),
-            'tasks': self._format_task_data(tasks_with_time)
-        }
+        tasks = self._format_task_data(tasks_with_time)
+        total_logged_time = self._get_total_duration(queryset)
 
-        serializer = self.get_serializer(response_data)
-        return Response(serializer.data)
+        page = self.paginate_queryset(tasks)
+        if page is not None:
+            response_data = {
+                'total_logged_time': total_logged_time,
+                'tasks': page
+            }
+            return self.get_paginated_response(response_data)
+
+        response_data = {
+            'total_logged_time': total_logged_time,
+            'tasks': tasks
+        }
+        return Response(response_data)
