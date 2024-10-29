@@ -1,3 +1,4 @@
+from django.core import mail
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -53,25 +54,27 @@ class TaskViewSetTests(APITestCase):
         """Test updating a task"""
         data = {
             'title': 'Updated Bug Fix',
-            'description': 'Updated the critical bug in the production environment.'
+            'description': 'Updated the critical bug in the production environment.',
+            'status': 'in_progress'
         }
         response = self.client.put(self.task_detail_url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.task.refresh_from_db()
         self.assertEqual(self.task.title, 'Updated Bug Fix')
         self.assertEqual(self.task.description, 'Updated the critical bug in the production environment.')
+        self.assertEqual(self.task.status, 'in_progress')
 
     def test_patch_task(self):
-        """Test updating a task"""
+        """Test partially updating a task"""
         data = {
             'executor': 1,
-            'is_completed': True
+            'status': 'completed'
         }
         response = self.client.patch(self.task_detail_url, data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.task.refresh_from_db()
         self.assertEqual(self.task.executor.id, 1)
-        self.assertTrue(self.task.is_completed)
+        self.assertEqual(self.task.status, 'completed')
 
     def test_list_comments(self):
         """Test listing comments for a task"""
@@ -320,3 +323,49 @@ class TestTaskModelStr(APITestCase):
         )
         expected_str = f'{self.user} - {self.task.title} on {start_time}'
         self.assertEqual(str(timelog), expected_str)
+
+
+class TaskSignalTests(APITestCase):
+    fixtures = ['users.json', 'tasks.json', 'comments.json']  # Make sure your fixtures are correctly named and loaded.
+
+    def setUp(self):
+        self.user1 = User.objects.get(pk=1)
+        self.user2 = User.objects.get(pk=2)
+        self.task1 = Task.objects.get(pk=1)
+        self.task2 = Task.objects.get(pk=2)
+
+    def test_send_task_assigned_notification(self):
+        self.task1.executor = self.user1  # Reassign executor
+        self.task1.save()
+
+        # Check if an email is sent to the new executor
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(self.user1.email, mail.outbox[0].to)
+        self.assertIn(self.task1.title, mail.outbox[0].body)
+
+    def test_send_comment_notification(self):
+        Comment.objects.create(task=self.task1, user=self.user2, text="Another comment.")
+
+        # Check if an email is sent to the executor of the task
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(self.user2.email, mail.outbox[0].to)
+        self.assertIn(self.task1.title, mail.outbox[0].subject)
+
+    def test_send_task_completed_notification_with_commenters(self):
+        Comment.objects.create(task=self.task1, user=self.user2, text="Another comment.")
+        self.task1.status = 'completed'
+        self.task1.save()
+
+        # Check if an email is sent to distinct commenters
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertIn(self.user2.email, mail.outbox[0].to)
+        self.assertIn(self.user1.email, mail.outbox[1].to)
+        self.assertIn(self.task1.title, mail.outbox[0].subject)
+
+    def test_send_task_completed_notification_no_commenters(self):
+        Comment.objects.filter(task=self.task1).delete()  # Ensure no comments on the task
+        self.task1.status = 'completed'
+        self.task1.save()
+
+        # No email should be sent as there are no commenters
+        self.assertEqual(len(mail.outbox), 0)
