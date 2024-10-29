@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure--5x)i0j6)wox$gs=$q@x$p8qymrw@$nsk)_aa48vo=)**d)n6('
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     # "corsheaders",
     "drf_spectacular",
     # Local apps
+    'config',
     "apps.common",
     "apps.users",
     "apps.tasks",
@@ -97,12 +98,12 @@ REST_FRAMEWORK = {
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
+if os.getenv('RUNNING_IN_DOCKER'):
+    REDIS_HOST = os.getenv('REDIS_HOST')
+    POSTGRES_HOST = os.getenv('POSTGRES_HOST')
+else:
+    REDIS_HOST = 'localhost'
+    POSTGRES_HOST = 'localhost'
 
 DATABASES = {
     'default': {
@@ -110,8 +111,7 @@ DATABASES = {
         'NAME': os.getenv('POSTGRES_DB'),
         'USER': os.getenv('POSTGRES_USER'),
         'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
-        # 'HOST': os.getenv('POSTGRES_HOST'),
-        'HOST': 'localhost',
+        'HOST': POSTGRES_HOST,
         'PORT': os.getenv('POSTGRES_PORT', 5432),
     }
 }
@@ -119,8 +119,7 @@ DATABASES = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        # "LOCATION": f"redis://{os.getenv('REDIS_HOST')}:6379/1",
-        "LOCATION": "redis://localhost:6379/1",
+        "LOCATION": f"redis://{REDIS_HOST}:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -162,6 +161,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = '/app/staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

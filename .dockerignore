@@ -1,0 +1,6 @@
+.env
+htmlcov
+db.sqlite3
+.coverage
+.git
+.idea

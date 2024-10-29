@@ -18,6 +18,8 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    depends_on:
+      - db
 
   redis:
     image: redis:latest
@@ -31,17 +33,36 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    command:
+      - sh
+      - -c
+      - |
+        python manage.py wait_for_db &&
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        gunicorn config.wsgi:application \
+          --bind 0.0.0.0:8000 \
+          --workers 4 \
+          --threads 4 \
+          --access-logfile - \
+          --access-logformat '%(h)s - - [%(t)s] \"%(r)s\" %(s)s %(b)s'
     ports:
       - "8000:8000"
     volumes:
-      - ./api:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
+    environment:
+      - RUNNING_IN_DOCKER=true
     depends_on:
       - db
       - redis
     env_file:
       - .env
 
-
 volumes:
   postgres_data:
+    driver: local
+  static_volume:
+    driver: local
+  media_volume:
     driver: local
