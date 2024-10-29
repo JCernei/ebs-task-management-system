@@ -5,9 +5,17 @@ from apps.users.models import User
 
 
 class Task(models.Model):
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('canceled', 'Canceled'),
+        ('archived', 'Archived'),
+    ]
+
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    is_completed = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='task_owner', null=True, editable=False)
     executor = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='task_executor', null=True)
 

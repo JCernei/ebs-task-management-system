@@ -20,7 +20,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = '__all__'
-        read_only_fields = ['is_completed']
+        read_only_fields = ['status']
 
 
 class TaskListSerializer(serializers.ModelSerializer):
@@ -40,12 +40,12 @@ class TaskDetailSerializer(serializers.ModelSerializer):
 
 
 class TaskUpdateSerializer(serializers.ModelSerializer):
-    is_completed = serializers.BooleanField(required=False)
+    status = serializers.ChoiceField(choices=Task.STATUS_CHOICES, required=False)
     executor = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), required=False)
 
     class Meta:
         model = Task
-        fields = ['id', 'title', 'executor', 'is_completed']
+        fields = ['id', 'title', 'executor', 'status']
         read_only_fields = ['id', 'title']
 
 

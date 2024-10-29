@@ -9,7 +9,9 @@ class CommentInline(admin.TabularInline):
 
 
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ('title', 'description', 'owner', 'executor', 'is_completed', 'comment_count')
+    list_display = ('title', 'owner', 'executor', 'status', 'comment_count')
+    list_filter = ('status', 'executor')
+    search_fields = ('title',)
     inlines = [CommentInline]
 
     def comment_count(self, obj):
