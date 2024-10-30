@@ -219,15 +219,8 @@ class ReportViewSet(viewsets.GenericViewSet):
         total_logged_time = self._get_total_duration(queryset)
 
         page = self.paginate_queryset(tasks)
-        if page is not None:
-            response_data = {
-                'total_logged_time': total_logged_time,
-                'tasks': page
-            }
-            return self.get_paginated_response(response_data)
-
         response_data = {
             'total_logged_time': total_logged_time,
-            'tasks': tasks
+            'tasks': page
         }
-        return Response(response_data)
+        return self.get_paginated_response(response_data)

@@ -42,5 +42,6 @@ omit = [
     "apps/common/permissions.py",
     "apps/common/validators.py",
     "manage.py",
-    "apps/tasks/admin.py"
+    "apps/tasks/admin.py",
+    "*/management/*"
 ]
