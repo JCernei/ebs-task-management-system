@@ -25,3 +25,22 @@ coverage = "^7.6.3"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.coverage.run]
+branch = true
+source = ["."]
+
+[tool.coverage.report]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/venv/*",
+    "*/__init__.py",
+    "*/settings.py",
+    "config/asgi.py",
+    "config/wsgi.py",
+    "apps/common/permissions.py",
+    "apps/common/validators.py",
+    "manage.py",
+    "apps/tasks/admin.py"
+]
