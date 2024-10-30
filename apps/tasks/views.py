@@ -1,5 +1,7 @@
 from django.db.models import Sum, F, ExpressionWrapper, DurationField
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from rest_framework import viewsets
@@ -18,10 +20,12 @@ from apps.tasks.serializers import TaskSerializer, TaskDetailSerializer, TaskLis
 
 class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Task.objects.all()
+    queryset = Task.objects.all().order_by('id')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = TaskFilter
     search_fields = ['title']
+
+    # pagination_class = PageNumberPagination
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -131,7 +135,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 class ReportViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = TimeLog.objects.all()
+    queryset = TimeLog.objects.all().order_by('id')
     filter_backends = [DjangoFilterBackend]
     filterset_class = TimeLogFilter
     serializer_class = ReportSerializer
@@ -197,14 +201,10 @@ class ReportViewSet(viewsets.GenericViewSet):
             return 0
         return duration.total_seconds() // 60
 
+    @method_decorator(cache_page(60))
     def list(self, request):
-        data = request.GET.copy()
-        # If no user filter provided, default to current user
-        if 'user' not in data:
-            data['user'] = request.user.id
-
         # Apply filters
-        filterset = self.filterset_class(data, queryset=self.get_queryset(), )
+        filterset = self.filterset_class(request.GET, queryset=self.get_queryset(), )
         if not filterset.is_valid():
             return Response(filterset.errors, status=400)
 
@@ -214,10 +214,19 @@ class ReportViewSet(viewsets.GenericViewSet):
         tasks_with_time = self._get_tasks_with_duration(queryset, filterset)
 
         # Prepare response data
-        response_data = {
-            'total_logged_time': self._get_total_duration(queryset),
-            'tasks': self._format_task_data(tasks_with_time)
-        }
+        tasks = self._format_task_data(tasks_with_time)
+        total_logged_time = self._get_total_duration(queryset)
 
-        serializer = self.get_serializer(response_data)
-        return Response(serializer.data)
+        page = self.paginate_queryset(tasks)
+        if page is not None:
+            response_data = {
+                'total_logged_time': total_logged_time,
+                'tasks': page
+            }
+            return self.get_paginated_response(response_data)
+
+        response_data = {
+            'total_logged_time': total_logged_time,
+            'tasks': tasks
+        }
+        return Response(response_data)
