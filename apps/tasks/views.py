@@ -204,14 +204,6 @@ class ReportViewSet(viewsets.GenericViewSet):
 
     @method_decorator(cache_page(60))
     def list(self, request):
-<<<<<<< HEAD
-=======
-        data = request.GET.copy()
-        # # If no user filter provided, default to current user
-        # if 'user' not in data:
-        #     data['user'] = request.user.id
-
->>>>>>> c23de68 (WIP)
         # Apply filters
         filterset = self.filterset_class(request.GET, queryset=self.get_queryset(), )
         if not filterset.is_valid():

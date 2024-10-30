@@ -88,7 +88,7 @@ class UserListTestCase(APITestCase):
 
         # Assert that the user is in the returned list
         self.assertGreaterEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['full_name'], 'John Doe')
+        self.assertEqual(response.data['results'][0]['full_name'], 'John Doe')
 
     def test_user_list_unauthenticated(self):
         self.client.logout()

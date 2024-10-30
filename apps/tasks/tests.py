@@ -27,7 +27,7 @@ class TaskViewSetTests(APITestCase):
         """Test retrieving a list of tasks"""
         response = self.client.get(self.task_list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)  # Should return both tasks from fixtures
+        self.assertEqual(len(response.data['results']), 2)  # Should return both tasks from fixtures
 
     def test_retrieve_task(self):
         """Test retrieving a single task"""
@@ -205,9 +205,9 @@ class ReportViewSetTests(APITestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['total_logged_time'], 240)
+        self.assertEqual(response.data['results']['total_logged_time'], 240)
 
-        tasks = response.data['tasks']
+        tasks = response.data['results']['tasks']
         self.assertEqual(len(tasks), 2)
 
         # Both tasks should have 120 minutes (2 hours) logged
@@ -222,9 +222,9 @@ class ReportViewSetTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['total_logged_time'], 120)  # 2 hours
-        self.assertEqual(len(response.data['tasks']), 1)
-        self.assertEqual(response.data['tasks'][0]['id'], 1)
+        self.assertEqual(response.data['results']['total_logged_time'], 120)  # 2 hours
+        self.assertEqual(len(response.data['results']['tasks']), 1)
+        self.assertEqual(response.data['results']['tasks'][0]['id'], 1)
 
     def test_get_report_with_top_filter(self):
         """Test getting report with top filter"""
@@ -240,8 +240,8 @@ class ReportViewSetTests(APITestCase):
         response = self.client.get(f"{self.url}?top=1")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['tasks']), 1)
-        self.assertEqual(response.data['tasks'][0]['id'], 1)  # Should be Task 1 with most time
+        self.assertEqual(len(response.data['results']['tasks']), 1)
+        self.assertEqual(response.data['results']['tasks'][0]['id'], 1)  # Should be Task 1 with most time
 
     def test_filter_top_negative(self):
         """Test filter_top with negative value"""
@@ -254,9 +254,9 @@ class ReportViewSetTests(APITestCase):
         response = self.client.get(f"{self.url}?user=1")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['tasks']), 1)
-        self.assertEqual(response.data['tasks'][0]['id'], 2)
-        self.assertEqual(response.data['total_logged_time'], 120)
+        self.assertEqual(len(response.data['results']['tasks']), 1)
+        self.assertEqual(response.data['results']['tasks'][0]['id'], 2)
+        self.assertEqual(response.data['results']['total_logged_time'], 120)
 
     def test_get_report_with_null_total_duration(self):
         """Test total duration when all entries have NULL duration"""
@@ -273,11 +273,11 @@ class ReportViewSetTests(APITestCase):
             duration=None
         )
 
-        response = self.client.get(self.url)
+        response = self.client.get(f"{self.url}?user=2")
 
         self.assertEqual(response.status_code, 200)
         # Total duration should be 0 when all durations are NULL
-        self.assertEqual(response.data['total_logged_time'], 0)
+        self.assertEqual(response.data['results']['total_logged_time'], 0)
 
     def test_report_with_multiple_invalid_filters(self):
         """Test report generation with multiple invalid filter parameters"""
