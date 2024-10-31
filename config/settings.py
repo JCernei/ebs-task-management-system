@@ -14,6 +14,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from DjangoExampleProject.settings import MINIO_PRIVATE_BUCKETS
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     'django_filters',
     # "corsheaders",
     "drf_spectacular",
+    'django_minio_backend',
     # Local apps
     'config',
     "apps.common",
@@ -101,9 +103,11 @@ REST_FRAMEWORK = {
 if os.getenv('RUNNING_IN_DOCKER'):
     REDIS_HOST = os.getenv('REDIS_HOST')
     POSTGRES_HOST = os.getenv('POSTGRES_HOST')
+    MINIO_HOST = os.getenv('MINIO_STORAGE_HOST')
 else:
     REDIS_HOST = 'localhost'
     POSTGRES_HOST = 'localhost'
+    MINIO_HOST = 'localhost'
 
 DATABASES = {
     'default': {
@@ -160,9 +164,30 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = '/app/staticfiles'
+STORAGES = {
+    "default": {
+        "BACKEND": "django_minio_backend.models.MinioBackend",
+    },
+    "staticfiles": {
+        "BACKEND": "django_minio_backend.models.MinioBackendStatic",
+    },
+}
 
+STATIC_URL = '/static/'
+STATICFILES_STORAGE = 'django_minio_backend.models.MinioBackendStatic'
+MINIO_STATIC_FILES_BUCKET = 'static'  # replacement for STATIC_ROOT
+
+MEDIA_URL = '/media/'
+DEFAULT_FILE_STORAGE = 'django_minio_backend.models.MinioBackend'
+MINIO_MEDIA_FILES_BUCKET = 'media'  # replacement for MEDIA_ROOT
+
+MINIO_ENDPOINT = f'{MINIO_HOST}:9000'
+MINIO_ACCESS_KEY = os.getenv('MINIO_ROOT_USER')
+MINIO_SECRET_KEY = os.getenv('MINIO_ROOT_PASSWORD')
+MINIO_USE_HTTPS = False
+
+MINIO_PUBLIC_BUCKETS = ['static', ]
+MINIO_PRIVATE_BUCKETS = ['media', ]
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -173,6 +198,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "EBS Task Management System",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": True,
+    'COMPONENT_SPLIT_REQUEST': True,
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

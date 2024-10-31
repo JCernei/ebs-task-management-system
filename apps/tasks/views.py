@@ -3,19 +3,18 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters
-from rest_framework import viewsets
+from rest_framework import viewsets, filters, parsers
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.tasks.filters import TaskFilter, TimeLogFilter
-from apps.tasks.models import Task, Comment, TimeLog
+from apps.tasks.models import Task, Comment, TimeLog, Attachment
 from apps.tasks.serializers import TaskSerializer, TaskDetailSerializer, TaskListSerializer, \
     TaskUpdateSerializer, TaskCreateSerializer, CommentCreateSerializer, CommentListSerializer, \
     TimeLogListSerializer, TimeLogCreateSerializer, TimeLogStartSerializer, TimeLogStopSerializer, \
-    ReportSerializer
+    ReportSerializer, AttachmentSerializer
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -24,6 +23,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = TaskFilter
     search_fields = ['title']
+    parser_classes = [parsers.MultiPartParser]
 
     # pagination_class = PageNumberPagination
 
@@ -48,6 +48,8 @@ class TaskViewSet(viewsets.ModelViewSet):
             return TimeLogListSerializer
         elif self.action == 'create_logs':
             return TimeLogCreateSerializer
+        elif self.action in ['list_attachments', 'create_attachment']:
+            return AttachmentSerializer
         return TaskSerializer
 
     @action(detail=True, url_path='comments', url_name='comments')
@@ -132,6 +134,22 @@ class TaskViewSet(viewsets.ModelViewSet):
         active_timer.save()
         serializer = self.get_serializer(active_timer)
         return Response(serializer.data, status=200)
+
+    @action(detail=True, url_path='attachments', url_name='task_attachments', parser_classes=[parsers.MultiPartParser])
+    def list_attachments(self, request, pk=None):
+        task = self.get_object()
+        attachments = Attachment.objects.filter(task=task)
+        serializer = self.get_serializer(attachments, many=True)
+        return Response(serializer.data)
+
+    @list_attachments.mapping.post
+    def create_attachment(self, request, pk=None):
+        task = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        serializer.save(task=task, **validated_data)
+        return Response(serializer.data, status=201)
 
 
 class ReportViewSet(viewsets.GenericViewSet):
