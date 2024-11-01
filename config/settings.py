@@ -103,6 +103,18 @@ REST_FRAMEWORK = {
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+<<<<<<< HEAD
+=======
+if os.getenv('RUNNING_IN_DOCKER'):
+    REDIS_HOST = os.getenv('REDIS_HOST')
+    POSTGRES_HOST = os.getenv('POSTGRES_HOST')
+    MAILHOG_HOST = 'mailhog'
+else:
+    REDIS_HOST = 'localhost'
+    POSTGRES_HOST = 'localhost'
+    MAILHOG_HOST = 'localhost'
+
+>>>>>>> 1fdd706 (Add celery worker to send email notifications)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -199,14 +211,29 @@ SPECTACULAR_SETTINGS = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
+EMAIL_HOST = MAILHOG_HOST
+EMAIL_PORT = 1025
+EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = 'noreply@ebs-task-management.local'
+
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+# EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+# DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+# EMAIL_USE_TLS = True
+# EMAIL_USE_SSL = False
+# # EMAIL_TIMEOUT = 30
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
 }
+
+
+CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/0'
+CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:6379/0'
+# Optional: Add these for more configuration
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'

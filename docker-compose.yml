@@ -68,6 +68,26 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
+  
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_worker
+    environment:
+      - RUNNING_IN_DOCKER=true
+    command: celery -A config worker -l INFO -E
+    depends_on:
+      - redis
+    env_file:
+      - .env
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP server
 
 volumes:
   postgres_data:
