@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     # "corsheaders",
     "drf_spectacular",
     'django_minio_backend.apps.DjangoMinioBackendConfig',
+    'django_elasticsearch_dsl',
     # Local apps
     'config',
     "apps.common",
@@ -208,6 +209,7 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
 }
 
+<<<<<<< HEAD
 CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/0'
 CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:6379/0'
 # Optional: Add these for more configuration
@@ -220,4 +222,11 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.tasks.utils.tasks.send_weekly_report',  # Adjust path based on your project structure
         'schedule': crontab(hour='8', minute='0', day_of_week='1'),  # Monday at 8 AM
     },
+=======
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'localhost:9200',
+        # 'http_auth': ('username', 'password')
+    }
+>>>>>>> 0dae521 (WIP)
 }
