@@ -82,6 +82,20 @@ services:
     env_file:
       - .env
 
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery_beat
+    environment:
+      - RUNNING_IN_DOCKER=true
+    command: celery -A config beat -l INFO
+    depends_on:
+      - redis
+      - celery
+    env_file:
+      - .env
+
   mailhog:
     image: mailhog/mailhog
     container_name: mailhog
