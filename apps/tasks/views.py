@@ -23,9 +23,6 @@ class TaskViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = TaskFilter
     search_fields = ['title']
-    parser_classes = [parsers.MultiPartParser]
-
-    # pagination_class = PageNumberPagination
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -64,8 +61,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         task = self.get_object()
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
-        serializer.save(task=task, **validated_data)
+        serializer.save(task=task)
         return Response(serializer.data, status=201)
 
     @action(detail=True, url_path='logs', url_name='logs')
@@ -147,8 +143,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         task = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
-        serializer.save(task=task, **validated_data)
+        serializer.save(task=task)
         return Response(serializer.data, status=201)
 
 
