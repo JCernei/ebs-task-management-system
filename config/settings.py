@@ -14,7 +14,6 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from DjangoExampleProject.settings import MINIO_PRIVATE_BUCKETS
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,6 +25,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY')
+
+REDIS_HOST = os.getenv('REDIS_HOST')
+POSTGRES_HOST = os.getenv('POSTGRES_HOST')
+MINIO_HOST = os.getenv('MINIO_STORAGE_HOST')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -99,15 +102,6 @@ REST_FRAMEWORK = {
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-if os.getenv('RUNNING_IN_DOCKER'):
-    REDIS_HOST = os.getenv('REDIS_HOST')
-    POSTGRES_HOST = os.getenv('POSTGRES_HOST')
-    MINIO_HOST = os.getenv('MINIO_STORAGE_HOST')
-else:
-    REDIS_HOST = 'localhost'
-    POSTGRES_HOST = 'localhost'
-    MINIO_HOST = 'localhost'
 
 DATABASES = {
     'default': {

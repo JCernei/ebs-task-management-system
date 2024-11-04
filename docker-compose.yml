@@ -51,8 +51,6 @@ services:
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
-    environment:
-      - RUNNING_IN_DOCKER=true
     depends_on:
       - db
       - redis
