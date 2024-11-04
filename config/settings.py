@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'django_filters',
     # "corsheaders",
     "drf_spectacular",
-    'django_minio_backend',
+    'django_minio_backend.apps.DjangoMinioBackendConfig',
     # Local apps
     'config',
     "apps.common",
@@ -188,6 +188,9 @@ MINIO_USE_HTTPS = False
 
 MINIO_PUBLIC_BUCKETS = ['static', ]
 MINIO_PRIVATE_BUCKETS = ['media', ]
+
+MINIO_CONSISTENCY_CHECK_ON_START = True
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
