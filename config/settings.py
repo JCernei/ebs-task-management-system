@@ -29,6 +29,7 @@ REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
 POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'localhost')
 MAILHOG_HOST = os.getenv('MAILHOG_HOST', 'localhost')
 MINIO_HOST = os.getenv('MINIO_STORAGE_HOST', 'localhost')
+ELASTIC_HOST = os.getenv('ELASTIC_HOST', 'localhost')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
@@ -177,8 +178,8 @@ DEFAULT_FILE_STORAGE = 'django_minio_backend.models.MinioBackend'
 MINIO_MEDIA_FILES_BUCKET = 'media'  # replacement for MEDIA_ROOT
 
 MINIO_ENDPOINT = f'{MINIO_HOST}:9000'
-MINIO_ACCESS_KEY = os.getenv('MINIO_ROOT_USER')
-MINIO_SECRET_KEY = os.getenv('MINIO_ROOT_PASSWORD')
+MINIO_ACCESS_KEY = os.getenv('MINIO_ROOT_USER', 'minio')
+MINIO_SECRET_KEY = os.getenv('MINIO_ROOT_PASSWORD', 'minio123')
 MINIO_USE_HTTPS = False
 
 MINIO_PUBLIC_BUCKETS = ['static', ]
@@ -209,7 +210,6 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
 }
 
-<<<<<<< HEAD
 CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/0'
 CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:6379/0'
 # Optional: Add these for more configuration
@@ -219,14 +219,14 @@ CELERY_RESULT_SERIALIZER = 'json'
 
 CELERY_BEAT_SCHEDULE = {
     'send-weekly-reports': {
-        'task': 'apps.tasks.utils.tasks.send_weekly_report',  # Adjust path based on your project structure
+        'task': 'apps.tasks.tasks.send_weekly_report',
         'schedule': crontab(hour='8', minute='0', day_of_week='1'),  # Monday at 8 AM
-    },
-=======
+    }
+}
+
 ELASTICSEARCH_DSL = {
     'default': {
-        'hosts': 'localhost:9200',
-        # 'http_auth': ('username', 'password')
+        'hosts': f'http://{ELASTIC_HOST}:9200',
+        "http_auth": ("elastic", "LpHtxnsBqjxJjd=XqdL1"),
     }
->>>>>>> 0dae521 (WIP)
 }
