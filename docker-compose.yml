@@ -70,12 +70,8 @@ services:
       - "9001:9001"
   
   celery:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ebs-task-management-system-api
     container_name: celery_worker
-    environment:
-      - RUNNING_IN_DOCKER=true
     command: celery -A config worker -l INFO -E
     depends_on:
       - redis
@@ -83,12 +79,8 @@ services:
       - .env
 
   celery-beat:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ebs-task-management-system-api
     container_name: celery_beat
-    environment:
-      - RUNNING_IN_DOCKER=true
     command: celery -A config beat -l INFO
     depends_on:
       - redis
