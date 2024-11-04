@@ -2,7 +2,7 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from apps.tasks.models import Task, Comment
-from apps.tasks.utils.tasks import send_task_assigned_email, send_task_commented_email, \
+from apps.tasks.tasks import send_task_assigned_email, send_task_commented_email, \
     send_task_completed_email
 
 STATUS_COMPLETED = 'completed'
