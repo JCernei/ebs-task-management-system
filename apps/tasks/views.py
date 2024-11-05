@@ -150,7 +150,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 class ReportViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = TimeLog.objects.all().order_by('id')
+    queryset = TimeLog.objects.all()
     filter_backends = [DjangoFilterBackend]
     filterset_class = TimeLogFilter
     serializer_class = ReportSerializer
@@ -237,10 +237,8 @@ class ReportViewSet(viewsets.GenericViewSet):
             'total_logged_time': total_logged_time,
             'tasks': page
         }
-<<<<<<< HEAD
+
         return self.get_paginated_response(response_data)
-=======
-        return Response(response_data)
 
 
 class BaseSearchViewSet(viewsets.GenericViewSet):
@@ -293,4 +291,3 @@ class CommentSearchViewSet(BaseSearchViewSet):
     serializer_class = CommentDocumentSerializer
     search_fields = ['text']
     document_class = CommentDocument
->>>>>>> 992bedc (Add elastic serach for tasks and comments)
