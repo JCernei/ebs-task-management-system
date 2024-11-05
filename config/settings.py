@@ -26,6 +26,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
+REDIS_HOST = os.getenv('REDIS_HOST')
+POSTGRES_HOST = os.getenv('POSTGRES_HOST')
+MINIO_HOST = os.getenv('MINIO_STORAGE_HOST')
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -46,6 +50,7 @@ INSTALLED_APPS = [
     'django_filters',
     # "corsheaders",
     "drf_spectacular",
+    'django_minio_backend.apps.DjangoMinioBackendConfig',
     # Local apps
     'config',
     "apps.common",
@@ -97,13 +102,6 @@ REST_FRAMEWORK = {
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-if os.getenv('RUNNING_IN_DOCKER'):
-    REDIS_HOST = os.getenv('REDIS_HOST')
-    POSTGRES_HOST = os.getenv('POSTGRES_HOST')
-else:
-    REDIS_HOST = 'localhost'
-    POSTGRES_HOST = 'localhost'
 
 DATABASES = {
     'default': {
@@ -160,8 +158,32 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = '/app/staticfiles'
+STORAGES = {
+    "default": {
+        "BACKEND": "django_minio_backend.models.MinioBackend",
+    },
+    "staticfiles": {
+        "BACKEND": "django_minio_backend.models.MinioBackendStatic",
+    },
+}
+
+STATIC_URL = '/static/'
+STATICFILES_STORAGE = 'django_minio_backend.models.MinioBackendStatic'
+MINIO_STATIC_FILES_BUCKET = 'static'  # replacement for STATIC_ROOT
+
+MEDIA_URL = '/media/'
+DEFAULT_FILE_STORAGE = 'django_minio_backend.models.MinioBackend'
+MINIO_MEDIA_FILES_BUCKET = 'media'  # replacement for MEDIA_ROOT
+
+MINIO_ENDPOINT = f'{MINIO_HOST}:9000'
+MINIO_ACCESS_KEY = os.getenv('MINIO_ROOT_USER')
+MINIO_SECRET_KEY = os.getenv('MINIO_ROOT_PASSWORD')
+MINIO_USE_HTTPS = False
+
+MINIO_PUBLIC_BUCKETS = ['static', ]
+MINIO_PRIVATE_BUCKETS = ['media', ]
+
+MINIO_CONSISTENCY_CHECK_ON_START = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -173,6 +195,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "EBS Task Management System",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": True,
+    'COMPONENT_SPLIT_REQUEST': True,
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

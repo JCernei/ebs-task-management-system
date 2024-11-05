@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Sum, DurationField, ExpressionWrapper, F
+from django_minio_backend import MinioBackend, iso_date_prefix
 
 from apps.users.models import User
 
@@ -17,7 +18,8 @@ class Task(models.Model):
     description = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open', db_index=True)
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='task_owner', null=True, editable=False)
-    executor = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='task_executor', null=True, db_index=True)
+    executor = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='task_executor', null=True,
+                                 db_index=True)
 
     @property
     def logged_time(self) -> int:
@@ -43,8 +45,8 @@ class Comment(models.Model):
 
 
 class TimeLog(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.SET_NULL, null=True , related_name='time_logs', db_index=True)
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True , related_name='user_time_logs', db_index=True)
+    task = models.ForeignKey(Task, on_delete=models.SET_NULL, null=True, related_name='time_logs', db_index=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='user_time_logs', db_index=True)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
     note = models.TextField(null=True, blank=True)
@@ -58,3 +60,12 @@ class TimeLog(models.Model):
 
     def __str__(self):
         return f'{self.user} - {self.task.title} on {self.start_time}'
+
+
+class Attachment(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(storage=MinioBackend(bucket_name='media'), upload_to=iso_date_prefix)
+
+    def __str__(self):
+        return f"Attachment for {self.task.title}"

@@ -1,7 +1,7 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from apps.tasks.models import Task, Comment, TimeLog
+from apps.tasks.models import Task, Comment, TimeLog, Attachment
 from apps.users.models import User
 from apps.users.serializers import UserSerializer
 
@@ -113,3 +113,13 @@ class ReportTaskListSerializer(serializers.Serializer):
 class ReportSerializer(serializers.Serializer):
     total_logged_time = serializers.IntegerField()
     tasks = ReportTaskListSerializer(many=True)
+
+
+class AttachmentSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    file = serializers.FileField()
+
+    class Meta:
+        model = Attachment
+        fields = ['id', 'user', 'file']
+        read_only_fields = ['id']

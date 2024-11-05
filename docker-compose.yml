@@ -51,13 +51,23 @@ services:
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
-    environment:
-      - RUNNING_IN_DOCKER=true
     depends_on:
       - db
       - redis
     env_file:
       - .env
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    volumes:
+      - minio_volume:/data
+    env_file:
+      - .env
+    command: 'minio server /data --console-address ":9001"'
+    ports:
+      - "9000:9000"
+      - "9001:9001"
 
 volumes:
   postgres_data:
@@ -65,4 +75,6 @@ volumes:
   static_volume:
     driver: local
   media_volume:
+    driver: local
+  minio_volume:
     driver: local
