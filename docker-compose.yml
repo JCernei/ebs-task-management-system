@@ -68,6 +68,32 @@ services:
     ports:
       - "9000:9000"
       - "9001:9001"
+  
+  celery:
+    image: ebs-task-management-system-api
+    container_name: celery_worker
+    command: celery -A config worker -l INFO -E
+    depends_on:
+      - redis
+    env_file:
+      - .env
+
+  celery-beat:
+    image: ebs-task-management-system-api
+    container_name: celery_beat
+    command: celery -A config beat -l INFO
+    depends_on:
+      - redis
+      - celery
+    env_file:
+      - .env
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "8025:8025"  # Web UI
+      - "1025:1025"  # SMTP server
 
 volumes:
   postgres_data:

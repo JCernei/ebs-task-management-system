@@ -14,9 +14,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from dotenv import load_dotenv
+from celery.schedules import crontab
 
-load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -24,14 +23,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure--5x)i0j6)wox$gs=$q@x$p8qymrw@$nsk)_aa48vo=)**d)n6(')
 
-REDIS_HOST = os.getenv('REDIS_HOST')
-POSTGRES_HOST = os.getenv('POSTGRES_HOST')
-MINIO_HOST = os.getenv('MINIO_STORAGE_HOST')
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'localhost')
+MAILHOG_HOST = os.getenv('MAILHOG_HOST', 'localhost')
+MINIO_HOST = os.getenv('MINIO_STORAGE_HOST', 'localhost')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = []
 
@@ -106,9 +106,9 @@ REST_FRAMEWORK = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB'),
-        'USER': os.getenv('POSTGRES_USER'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'NAME': os.getenv('POSTGRES_DB', 'db'),
+        'USER': os.getenv('POSTGRES_USER', 'postgres'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'postgres'),
         'HOST': POSTGRES_HOST,
         'PORT': os.getenv('POSTGRES_PORT', 5432),
     }
@@ -199,14 +199,25 @@ SPECTACULAR_SETTINGS = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
+EMAIL_HOST = MAILHOG_HOST
+EMAIL_PORT = 1025
+EMAIL_USE_TLS = False
+DEFAULT_FROM_EMAIL = 'noreply@ebs-task-management.local'
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+}
+
+CELERY_BROKER_URL = f'redis://{REDIS_HOST}:6379/0'
+CELERY_RESULT_BACKEND = f'redis://{REDIS_HOST}:6379/0'
+# Optional: Add these for more configuration
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+CELERY_BEAT_SCHEDULE = {
+    'send-weekly-reports': {
+        'task': 'apps.tasks.utils.tasks.send_weekly_report',  # Adjust path based on your project structure
+        'schedule': crontab(hour='8', minute='0', day_of_week='1'),  # Monday at 8 AM
+    },
 }
