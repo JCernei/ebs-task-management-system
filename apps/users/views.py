@@ -51,6 +51,6 @@ class LoginView(TokenObtainPairView):
 
 
 class UserListView(ListAPIView):
-    queryset = User.objects.all()
+    queryset = User.objects.all().order_by('id')
     serializer_class = UserListSerializer
     permission_classes = [IsAuthenticated]

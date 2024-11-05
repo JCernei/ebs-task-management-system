@@ -50,7 +50,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             return TimeLogCreateSerializer
         return TaskSerializer
 
-    @action(detail=True, url_path='comments', url_name='task_comments')
+    @action(detail=True, url_path='comments', url_name='comments')
     def list_comment(self, request, pk=None):
         task = self.get_object()
         comments = Comment.objects.filter(task=task)
@@ -66,7 +66,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer.save(task=task, **validated_data)
         return Response(serializer.data, status=201)
 
-    @action(detail=True, url_path='logs', url_name='task_logs')
+    @action(detail=True, url_path='logs', url_name='logs')
     def list_logs(self, request, pk=None):
         task = self.get_object()
         logs = TimeLog.objects.filter(task=task)
@@ -95,7 +95,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         )
         return Response(serializer.data, status=201)
 
-    @action(detail=True, methods=['post'], url_path='logs/start', url_name='task_logs')
+    @action(detail=True, methods=['post'], url_path='logs/start', url_name='logs-start')
     def start_timer(self, request, pk=None):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -111,7 +111,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         TimeLog.objects.create(task=task, start_time=timezone.now(), **validated_data)
         return Response(serializer.data, status=201)
 
-    @action(detail=True, methods=['post'], url_path='logs/stop', url_name='task_logs')
+    @action(detail=True, methods=['post'], url_path='logs/stop', url_name='logs-stop')
     def stop_timer(self, request, pk=None):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -122,15 +122,16 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         active_timer.end_time = timezone.now()
 
-        note = validated_data['note']
-        if active_timer.note:
-            active_timer.note += f"\n{note}"
-        else:
-            active_timer.note = note
+        note = validated_data.get('note', '')
+        if note:
+            if active_timer.note:
+                active_timer.note += f"\n{note}"
+            else:
+                active_timer.note = note
 
         active_timer.save()
         serializer = self.get_serializer(active_timer)
-        return Response(serializer.data)
+        return Response(serializer.data, status=200)
 
 
 class ReportViewSet(viewsets.GenericViewSet):
@@ -218,15 +219,8 @@ class ReportViewSet(viewsets.GenericViewSet):
         total_logged_time = self._get_total_duration(queryset)
 
         page = self.paginate_queryset(tasks)
-        if page is not None:
-            response_data = {
-                'total_logged_time': total_logged_time,
-                'tasks': page
-            }
-            return self.get_paginated_response(response_data)
-
         response_data = {
             'total_logged_time': total_logged_time,
-            'tasks': tasks
+            'tasks': page
         }
-        return Response(response_data)
+        return self.get_paginated_response(response_data)

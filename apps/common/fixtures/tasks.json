@@ -1,0 +1,24 @@
+[
+  {
+    "model": "tasks.task",
+    "pk": 1,
+    "fields": {
+      "title": "Fix Bug #101",
+      "description": "Fix the critical bug in the production environment.",
+      "status": "open",
+      "owner": 1,
+      "executor": 2
+    }
+  },
+  {
+    "model": "tasks.task",
+    "pk": 2,
+    "fields": {
+      "title": "Design API for Comments",
+      "description": "Create the API to handle comments for tasks.",
+      "status": "open",
+      "owner": 1,
+      "executor": 1
+    }
+  }
+]
