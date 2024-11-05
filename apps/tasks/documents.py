@@ -18,8 +18,6 @@ class TaskDocument(Document):
         fields = [
             'title',
             'description',
-            'status',
-            # Add other fields you want to index
         ]
 
 
@@ -36,6 +34,4 @@ class CommentDocument(Document):
         model = Comment
         fields = [
             'text',
-            'created_at',
-            # Add other fields you want to index
         ]
