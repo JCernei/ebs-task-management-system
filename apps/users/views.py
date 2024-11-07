@@ -84,6 +84,6 @@ class GithubAuthCallbackView(GenericAPIView):
         code = request.query_params.get("code")
 
         if code:
-            return Response(f"Authorization code: {code}")
+            return Response({'Authorization code': f'{code}'})
 
         return Response("No authorization code provided", status=400)
