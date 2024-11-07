@@ -9,12 +9,13 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.tasks.documents import TaskDocument, CommentDocument
 from apps.tasks.filters import TaskFilter, TimeLogFilter
 from apps.tasks.models import Task, Comment, TimeLog, Attachment
 from apps.tasks.serializers import TaskSerializer, TaskDetailSerializer, TaskListSerializer, \
     TaskUpdateSerializer, TaskCreateSerializer, CommentCreateSerializer, CommentListSerializer, \
     TimeLogListSerializer, TimeLogCreateSerializer, TimeLogStartSerializer, TimeLogStopSerializer, \
-    ReportSerializer, AttachmentSerializer
+    ReportSerializer, AttachmentSerializer, TaskDocumentSerializer, CommentDocumentSerializer
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -149,7 +150,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 class ReportViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = TimeLog.objects.all().order_by('id')
+    queryset = TimeLog.objects.all()
     filter_backends = [DjangoFilterBackend]
     filterset_class = TimeLogFilter
     serializer_class = ReportSerializer
@@ -236,4 +237,57 @@ class ReportViewSet(viewsets.GenericViewSet):
             'total_logged_time': total_logged_time,
             'tasks': page
         }
+
         return self.get_paginated_response(response_data)
+
+
+class BaseSearchViewSet(viewsets.GenericViewSet):
+    """
+    Base viewset for Elasticsearch-based search functionality.
+    """
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    document_class = None  # Should be set by child classes
+    search_fields = []
+
+    def list(self, request):
+        query = request.query_params.get('search', '')
+
+        # Create an Elasticsearch search object
+        search = (self.document_class.search()
+                  .query("multi_match", query=query, fields=self.search_fields)
+                  .extra(size=10000)
+                  )
+
+        # Execute search and format results
+        response_queryset = search.to_queryset().order_by('id')
+
+        # Paginate the queryset if needed
+        page = self.paginate_queryset(response_queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        # Serialize the entire response if pagination is not used
+        serializer = self.get_serializer(response_queryset, many=True)
+        return Response(serializer.data)
+
+
+class TaskSearchViewSet(BaseSearchViewSet):
+    """
+    ViewSet for searching tasks using Elasticsearch.
+    """
+    queryset = Task.objects.all()
+    serializer_class = TaskDocumentSerializer
+    search_fields = ['title', 'description']
+    document_class = TaskDocument
+
+
+class CommentSearchViewSet(BaseSearchViewSet):
+    """
+    ViewSet for searching comments using Elasticsearch.
+    """
+    queryset = Comment.objects.all()
+    serializer_class = CommentDocumentSerializer
+    search_fields = ['text']
+    document_class = CommentDocument

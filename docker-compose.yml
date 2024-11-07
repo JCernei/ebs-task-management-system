@@ -94,6 +94,29 @@ services:
     ports:
       - "8025:8025"  # Web UI
       - "1025:1025"  # SMTP server
+      
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    container_name: kibana
+    links:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    env_file:
+      - .env
 
 volumes:
   postgres_data:
@@ -103,4 +126,6 @@ volumes:
   media_volume:
     driver: local
   minio_volume:
+    driver: local
+  elasticsearch-data:
     driver: local
