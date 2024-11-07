@@ -24,5 +24,5 @@ class UserListSerializer(serializers.ModelSerializer):
         fields = ["id", "full_name"]
 
 
-class GithubCallbackSerializer(serializers.Serializer):
-    code = serializers.CharField()
+class GitHubLoginRedirectSerializer(serializers.Serializer):
+    redirect_url = serializers.URLField()
