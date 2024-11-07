@@ -47,14 +47,24 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     # Third party apps
     "rest_framework",
+    "rest_framework.authtoken",
     "rest_framework_simplejwt",
     "django_filters",
     # "corsheaders",
     "drf_spectacular",
     "django_minio_backend.apps.DjangoMinioBackendConfig",
     "django_elasticsearch_dsl",
+    "django_filters",
+    "drf_spectacular",
+    "django_minio_backend.apps.DjangoMinioBackendConfig",
+    "django_elasticsearch_dsl",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.github",
     # Local apps
     "config",
     "apps.common",
@@ -70,6 +80,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     # Local middleware
     "apps.common.middlewares.ApiMiddleware",
 ]
@@ -238,3 +249,28 @@ ELASTICSEARCH_DSL = {
         "http_auth": ("elastic", "LpHtxnsBqjxJjd=XqdL1"),
     }
 }
+
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+REDIRECT_URI = os.getenv("REDIRECT_URI")
+SOCIALACCOUNT_PROVIDERS = {
+    "github": {
+        "APP": {
+            "client_id": f"{os.getenv("GITHUB_CLIENT_ID")}",
+            "secret": f"{os.getenv("GITHUB_SECRET")}",
+            "key": "",
+            "redirect_uri": REDIRECT_URI,
+        }
+    }
+}
+
+ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
