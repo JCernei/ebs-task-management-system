@@ -44,6 +44,19 @@ class UserRegistrationTestCase(APITestCase):
         # Assert the registration fails due to missing fields
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_duplicate_email_registration(self):
+        url = reverse("token_register")
+        data = {
+            "first_name": "Alice",
+            "last_name": "Johnson",
+            "email": "john.doe@example.com",  # Existing email
+            "password": "password123",
+        }
+        response = self.client.post(url, data, format="json")
+
+        # Assert the registration fails due to duplicate email
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class UserLoginTestCase(APITestCase):
     fixtures = ["users"]
@@ -68,6 +81,14 @@ class UserLoginTestCase(APITestCase):
         # Assert that login failed
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_login_unregistered_email(self):
+        url = reverse("login_user")
+        data = {"email": "unregistered@example.com", "password": "password123"}
+        response = self.client.post(url, data, format="json")
+
+        # Assert that login failed due to unregistered email
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
 
 class UserListTestCase(APITestCase):
     fixtures = ["users"]
@@ -75,6 +96,17 @@ class UserListTestCase(APITestCase):
     def setUp(self):
         # Authenticate with user John
         self.client.force_authenticate(user=User.objects.get(pk=1))
+
+    def test_user_list_pagination(self):
+        url = reverse("user_list")
+        response = self.client.get(url, {'page': 1})
+
+        # Assert that the user list request is successful and paginated
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('results', response.data)
+        self.assertIn('count', response.data)
+        self.assertIn('next', response.data)
+        self.assertIn('previous', response.data)
 
     def test_user_list(self):
         url = reverse("user_list")

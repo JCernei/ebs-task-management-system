@@ -1,4 +1,5 @@
 from django.core import mail
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -192,6 +193,13 @@ class TaskViewSetTests(APITestCase):
             response.data["detail"], "You already have an active timer for this task."
         )
 
+    def test_cannot_stop_timer_without_active_timer(self):
+        """Test stopping a timer when no active timer exists"""
+        url = reverse("tasks-logs-stop", kwargs={"pk": self.task.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["detail"], "Not found.")
+
 
 class ReportViewSetTests(APITestCase):
     fixtures = ["users", "tasks", "time_logs"]
@@ -217,9 +225,9 @@ class ReportViewSetTests(APITestCase):
 
     def test_get_report_with_date_filter(self):
         """Test getting report with date filter"""
-        # Filter for Oct 17 only (should only get Task 1's time log)
+        # Filter for Nov 7 only (should only get Task 1's time log)
         response = self.client.get(
-            f"{self.url}?date_from=2024-10-17&date_to=2024-10-17"
+            f"{self.url}?date_from=2024-11-07&date_to=2024-11-07"
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -322,12 +330,9 @@ class TestTaskModelStr(APITestCase):
         self.assertEqual(str(timelog), expected_str)
 
 
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
 class TaskSignalTests(APITestCase):
-    fixtures = [
-        "users.json",
-        "tasks.json",
-        "comments.json",
-    ]  # Make sure your fixtures are correctly named and loaded.
+    fixtures = ["users", "tasks", "comments"]
 
     def setUp(self):
         self.user1 = User.objects.get(pk=1)
