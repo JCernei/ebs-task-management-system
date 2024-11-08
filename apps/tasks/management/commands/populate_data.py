@@ -8,8 +8,9 @@ from apps.users.models import User
 
 fake = Faker()
 
+
 class Command(BaseCommand):
-    help = 'Populate database with random users, tasks, and time logs'
+    help = "Populate database with random users, tasks, and time logs"
 
     def handle(self, *args, **kwargs):
         users = []
@@ -23,18 +24,18 @@ class Command(BaseCommand):
                 is_superuser=fake.boolean(),
                 is_staff=fake.boolean(),
             )
-            password=fake.password()
+            password = fake.password()
             user.set_password(password)
             users.append(user)
 
         # Bulk create users
         User.objects.bulk_create(users)
-        self.stdout.write(self.style.SUCCESS('Successfully added 100 users.'))
+        self.stdout.write(self.style.SUCCESS("Successfully added 100 users."))
 
         # Refresh list of created users
         users = list(User.objects.all())
         if not users:
-            self.stdout.write(self.style.ERROR('No users found in the database.'))
+            self.stdout.write(self.style.ERROR("No users found in the database."))
             return
 
         status_choices = dict(Task.STATUS_CHOICES)
@@ -54,14 +55,16 @@ class Command(BaseCommand):
 
         # Bulk create tasks
         Task.objects.bulk_create(tasks)
-        self.stdout.write(self.style.SUCCESS('Successfully added 25,000 tasks.'))
+        self.stdout.write(self.style.SUCCESS("Successfully added 25,000 tasks."))
 
         # Fetch created tasks
         created_tasks = Task.objects.all()
 
         # Create 50,000 random time logs
         for _ in range(50000):
-            start_time = fake.date_time_this_year(before_now=True, after_now=False, tzinfo=timezone.now().tzinfo)
+            start_time = fake.date_time_this_year(
+                before_now=True, after_now=False, tzinfo=timezone.now().tzinfo
+            )
             end_time = start_time + timedelta(minutes=random.randint(10, 300))
 
             time_log = TimeLog(
@@ -75,5 +78,4 @@ class Command(BaseCommand):
 
         # Bulk create time logs
         TimeLog.objects.bulk_create(time_logs)
-        self.stdout.write(self.style.SUCCESS('Successfully added 50,000 time logs.'))
-
+        self.stdout.write(self.style.SUCCESS("Successfully added 50,000 time logs."))

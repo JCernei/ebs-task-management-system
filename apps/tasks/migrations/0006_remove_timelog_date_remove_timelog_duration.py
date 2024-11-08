@@ -4,18 +4,17 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tasks', '0005_timelog'),
+        ("tasks", "0005_timelog"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='timelog',
-            name='date',
+            model_name="timelog",
+            name="date",
         ),
         migrations.RemoveField(
-            model_name='timelog',
-            name='duration',
+            model_name="timelog",
+            name="duration",
         ),
     ]

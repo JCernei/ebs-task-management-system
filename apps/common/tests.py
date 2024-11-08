@@ -65,4 +65,6 @@ class ApiMiddlewareExceptionTestCase(TestCase):
         self.assertIn("exception", content)
         self.assertIn("detail", content)
         self.assertEqual(content["exception"], "Test exception")
-        self.assertEqual(content["detail"], "Something Went Wrong. Please contact support")
+        self.assertEqual(
+            content["detail"], "Something Went Wrong. Please contact support"
+        )
