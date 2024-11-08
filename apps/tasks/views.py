@@ -12,45 +12,58 @@ from rest_framework.response import Response
 from apps.tasks.documents import TaskDocument, CommentDocument
 from apps.tasks.filters import TaskFilter, TimeLogFilter
 from apps.tasks.models import Task, Comment, TimeLog, Attachment
-from apps.tasks.serializers import TaskSerializer, TaskDetailSerializer, TaskListSerializer, \
-    TaskUpdateSerializer, TaskCreateSerializer, CommentCreateSerializer, CommentListSerializer, \
-    TimeLogListSerializer, TimeLogCreateSerializer, TimeLogStartSerializer, TimeLogStopSerializer, \
-    ReportSerializer, AttachmentSerializer, TaskDocumentSerializer, CommentDocumentSerializer
+from apps.tasks.serializers import (
+    TaskSerializer,
+    TaskDetailSerializer,
+    TaskListSerializer,
+    TaskUpdateSerializer,
+    TaskCreateSerializer,
+    CommentCreateSerializer,
+    CommentListSerializer,
+    TimeLogListSerializer,
+    TimeLogCreateSerializer,
+    TimeLogStartSerializer,
+    TimeLogStopSerializer,
+    ReportSerializer,
+    AttachmentSerializer,
+    TaskDocumentSerializer,
+    CommentDocumentSerializer,
+)
 
 
 class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Task.objects.all().order_by('id')
+    queryset = Task.objects.all().order_by("id")
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = TaskFilter
-    search_fields = ['title']
+    search_fields = ["title"]
 
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action == "list":
             return TaskListSerializer
-        elif self.action == 'retrieve':
+        elif self.action == "retrieve":
             return TaskDetailSerializer
-        elif self.action == 'create':
+        elif self.action == "create":
             return TaskCreateSerializer
-        elif self.action == 'partial_update':
+        elif self.action == "partial_update":
             return TaskUpdateSerializer
-        elif self.action == 'list_comment':
+        elif self.action == "list_comment":
             return CommentListSerializer
-        elif self.action == 'create_comment':
+        elif self.action == "create_comment":
             return CommentCreateSerializer
-        elif self.action == 'start_timer':
+        elif self.action == "start_timer":
             return TimeLogStartSerializer
-        elif self.action == 'stop_timer':
+        elif self.action == "stop_timer":
             return TimeLogStopSerializer
-        elif self.action == 'list_logs':
+        elif self.action == "list_logs":
             return TimeLogListSerializer
-        elif self.action == 'create_logs':
+        elif self.action == "create_logs":
             return TimeLogCreateSerializer
-        elif self.action in ['list_attachments', 'create_attachment']:
+        elif self.action in ["list_attachments", "create_attachment"]:
             return AttachmentSerializer
         return TaskSerializer
 
-    @action(detail=True, url_path='comments', url_name='comments')
+    @action(detail=True, url_path="comments", url_name="comments")
     def list_comment(self, request, pk=None):
         task = self.get_object()
         comments = Comment.objects.filter(task=task)
@@ -60,12 +73,14 @@ class TaskViewSet(viewsets.ModelViewSet):
     @list_comment.mapping.post
     def create_comment(self, request, pk=None):
         task = self.get_object()
-        serializer = self.get_serializer(data=request.data, context={'request': request})
+        serializer = self.get_serializer(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save(task=task)
         return Response(serializer.data, status=201)
 
-    @action(detail=True, url_path='logs', url_name='logs')
+    @action(detail=True, url_path="logs", url_name="logs")
     def list_logs(self, request, pk=None):
         task = self.get_object()
         logs = TimeLog.objects.filter(task=task)
@@ -81,20 +96,20 @@ class TaskViewSet(viewsets.ModelViewSet):
         validated_data = serializer.validated_data
 
         # Calculate the start time based on duration
-        duration = timezone.timedelta(minutes=validated_data['duration'])
-        start_time = validated_data['end_time'] - duration
+        duration = timezone.timedelta(minutes=validated_data["duration"])
+        start_time = validated_data["end_time"] - duration
 
         # Create the time log entry
         TimeLog.objects.create(
             task=task,
             start_time=start_time,
-            user=validated_data['user'],
-            end_time=validated_data['end_time'],
-            note=validated_data['note']
+            user=validated_data["user"],
+            end_time=validated_data["end_time"],
+            note=validated_data["note"],
         )
         return Response(serializer.data, status=201)
 
-    @action(detail=True, methods=['post'], url_path='logs/start', url_name='logs-start')
+    @action(detail=True, methods=["post"], url_path="logs/start", url_name="logs-start")
     def start_timer(self, request, pk=None):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -102,26 +117,32 @@ class TaskViewSet(viewsets.ModelViewSet):
 
         task = self.get_object()
 
-        active_timer_exists = TimeLog.objects.filter(task=task, user=validated_data['user'],
-                                                     end_time__isnull=True).exists()
+        active_timer_exists = TimeLog.objects.filter(
+            task=task, user=validated_data["user"], end_time__isnull=True
+        ).exists()
         if active_timer_exists:
-            return Response({'detail': 'You already have an active timer for this task.'}, status=400)
+            return Response(
+                {"detail": "You already have an active timer for this task."},
+                status=400,
+            )
 
         TimeLog.objects.create(task=task, start_time=timezone.now(), **validated_data)
         return Response(serializer.data, status=201)
 
-    @action(detail=True, methods=['post'], url_path='logs/stop', url_name='logs-stop')
+    @action(detail=True, methods=["post"], url_path="logs/stop", url_name="logs-stop")
     def stop_timer(self, request, pk=None):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
         task = self.get_object()
-        active_timer = get_object_or_404(TimeLog, task=task, user=validated_data['user'], end_time__isnull=True)
+        active_timer = get_object_or_404(
+            TimeLog, task=task, user=validated_data["user"], end_time__isnull=True
+        )
 
         active_timer.end_time = timezone.now()
 
-        note = validated_data.get('note', '')
+        note = validated_data.get("note", "")
         if note:
             if active_timer.note:
                 active_timer.note += f"\n{note}"
@@ -132,7 +153,12 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(active_timer)
         return Response(serializer.data, status=200)
 
-    @action(detail=True, url_path='attachments', url_name='task_attachments', parser_classes=[parsers.MultiPartParser])
+    @action(
+        detail=True,
+        url_path="attachments",
+        url_name="task_attachments",
+        parser_classes=[parsers.MultiPartParser],
+    )
     def list_attachments(self, request, pk=None):
         task = self.get_object()
         attachments = Attachment.objects.filter(task=task)
@@ -160,23 +186,19 @@ class ReportViewSet(viewsets.GenericViewSet):
         Aggregate total duration for each task and order them by it
         """
         tasks = (
-            queryset
-            .values('task__id', 'task__title')
+            queryset.values("task__id", "task__title")
             .annotate(
                 total_duration=Sum(
-                    ExpressionWrapper(
-                        F('duration'),
-                        output_field=DurationField()
-                    )
+                    ExpressionWrapper(F("duration"), output_field=DurationField())
                 )
             )
-            .order_by('-total_duration')
+            .order_by("-total_duration")
         )
 
         # Apply top limit if specified in filter
-        top = getattr(filterset, 'top', 0)
+        top = getattr(filterset, "top", 0)
         if top:
-            tasks = tasks[:int(top)]
+            tasks = tasks[: int(top)]
 
         return tasks
 
@@ -186,9 +208,9 @@ class ReportViewSet(viewsets.GenericViewSet):
         """
         return [
             {
-                'id': task['task__id'],
-                'title': task['task__title'],
-                'logged_time': self._duration_to_minutes(task['total_duration'])
+                "id": task["task__id"],
+                "title": task["task__title"],
+                "logged_time": self._duration_to_minutes(task["total_duration"]),
             }
             for task in tasks_with_time
         ]
@@ -199,12 +221,9 @@ class ReportViewSet(viewsets.GenericViewSet):
         """
         total = queryset.aggregate(
             total_duration=Sum(
-                ExpressionWrapper(
-                    F('duration'),
-                    output_field=DurationField()
-                )
+                ExpressionWrapper(F("duration"), output_field=DurationField())
             )
-        )['total_duration']
+        )["total_duration"]
         return self._duration_to_minutes(total)
 
     @staticmethod
@@ -219,7 +238,10 @@ class ReportViewSet(viewsets.GenericViewSet):
     @method_decorator(cache_page(60))
     def list(self, request):
         # Apply filters
-        filterset = self.filterset_class(request.GET, queryset=self.get_queryset(), )
+        filterset = self.filterset_class(
+            request.GET,
+            queryset=self.get_queryset(),
+        )
         if not filterset.is_valid():
             return Response(filterset.errors, status=400)
 
@@ -233,10 +255,7 @@ class ReportViewSet(viewsets.GenericViewSet):
         total_logged_time = self._get_total_duration(queryset)
 
         page = self.paginate_queryset(tasks)
-        response_data = {
-            'total_logged_time': total_logged_time,
-            'tasks': page
-        }
+        response_data = {"total_logged_time": total_logged_time, "tasks": page}
 
         return self.get_paginated_response(response_data)
 
@@ -245,22 +264,24 @@ class BaseSearchViewSet(viewsets.GenericViewSet):
     """
     Base viewset for Elasticsearch-based search functionality.
     """
+
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     document_class = None  # Should be set by child classes
     search_fields = []
 
     def list(self, request):
-        query = request.query_params.get('search', '')
+        query = request.query_params.get("search", "")
 
         # Create an Elasticsearch search object
-        search = (self.document_class.search()
-                  .query("multi_match", query=query, fields=self.search_fields)
-                  .extra(size=10000)
-                  )
+        search = (
+            self.document_class.search()
+            .query("multi_match", query=query, fields=self.search_fields)
+            .extra(size=10000)
+        )
 
         # Execute search and format results
-        response_queryset = search.to_queryset().order_by('id')
+        response_queryset = search.to_queryset().order_by("id")
 
         # Paginate the queryset if needed
         page = self.paginate_queryset(response_queryset)
@@ -277,9 +298,10 @@ class TaskSearchViewSet(BaseSearchViewSet):
     """
     ViewSet for searching tasks using Elasticsearch.
     """
+
     queryset = Task.objects.all()
     serializer_class = TaskDocumentSerializer
-    search_fields = ['title', 'description']
+    search_fields = ["title", "description"]
     document_class = TaskDocument
 
 
@@ -287,7 +309,8 @@ class CommentSearchViewSet(BaseSearchViewSet):
     """
     ViewSet for searching comments using Elasticsearch.
     """
+
     queryset = Comment.objects.all()
     serializer_class = CommentDocumentSerializer
-    search_fields = ['text']
+    search_fields = ["text"]
     document_class = CommentDocument

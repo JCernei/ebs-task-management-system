@@ -4,15 +4,25 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tasks', '0008_remove_task_is_completed_task_status_and_more'),
+        ("tasks", "0008_remove_task_is_completed_task_status_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='task',
-            name='status',
-            field=models.CharField(choices=[('open', 'Open'), ('in_progress', 'In Progress'), ('completed', 'Completed'), ('canceled', 'Canceled'), ('archived', 'Archived')], db_index=True, default='open', max_length=20),
+            model_name="task",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("open", "Open"),
+                    ("in_progress", "In Progress"),
+                    ("completed", "Completed"),
+                    ("canceled", "Canceled"),
+                    ("archived", "Archived"),
+                ],
+                db_index=True,
+                default="open",
+                max_length=20,
+            ),
         ),
     ]

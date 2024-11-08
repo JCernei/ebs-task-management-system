@@ -6,45 +6,79 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tasks', '0007_timelog_duration'),
+        ("tasks", "0007_timelog_duration"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='task',
-            name='is_completed',
+            model_name="task",
+            name="is_completed",
         ),
         migrations.AddField(
-            model_name='task',
-            name='status',
-            field=models.CharField(choices=[('open', 'Open'), ('in_progress', 'In Progress'), ('completed', 'Completed'), ('canceled', 'Canceled'), ('archived', 'Archived')], default='open', max_length=20),
+            model_name="task",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("open", "Open"),
+                    ("in_progress", "In Progress"),
+                    ("completed", "Completed"),
+                    ("canceled", "Canceled"),
+                    ("archived", "Archived"),
+                ],
+                default="open",
+                max_length=20,
+            ),
         ),
         migrations.AlterField(
-            model_name='comment',
-            name='user',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL),
+            model_name="comment",
+            name="user",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='executor',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='task_executor', to=settings.AUTH_USER_MODEL),
+            model_name="task",
+            name="executor",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="task_executor",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterField(
-            model_name='task',
-            name='owner',
-            field=models.ForeignKey(editable=False, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='task_owner', to=settings.AUTH_USER_MODEL),
+            model_name="task",
+            name="owner",
+            field=models.ForeignKey(
+                editable=False,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="task_owner",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterField(
-            model_name='timelog',
-            name='task',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='time_logs', to='tasks.task'),
+            model_name="timelog",
+            name="task",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="time_logs",
+                to="tasks.task",
+            ),
         ),
         migrations.AlterField(
-            model_name='timelog',
-            name='user',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='user_time_logs', to=settings.AUTH_USER_MODEL),
+            model_name="timelog",
+            name="user",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="user_time_logs",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

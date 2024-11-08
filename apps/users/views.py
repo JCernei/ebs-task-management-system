@@ -37,20 +37,23 @@ class RegisterUserView(GenericAPIView):
         # Generate JWT token
         refresh = RefreshToken.for_user(user)
 
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-        })
+        return Response(
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            }
+        )
 
 
 class LoginView(TokenObtainPairView):
     """
     Login endpoint to authenticate a user and return JWT tokens.
     """
+
     pass  # This will use the default TokenObtainPairSerializer to handle login.
 
 
 class UserListView(ListAPIView):
-    queryset = User.objects.all().order_by('id')
+    queryset = User.objects.all().order_by("id")
     serializer_class = UserListSerializer
     permission_classes = [IsAuthenticated]
