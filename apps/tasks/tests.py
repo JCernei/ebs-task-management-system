@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
@@ -5,7 +7,8 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.tasks.models import Task, TimeLog, Comment
+from apps.tasks.models import Task, TimeLog, Comment, Attachment
+from apps.tasks.tasks import send_weekly_report
 from apps.users.models import User
 
 
@@ -329,6 +332,14 @@ class TestTaskModelStr(APITestCase):
         expected_str = f"{self.user} - {self.task.title} on {start_time}"
         self.assertEqual(str(timelog), expected_str)
 
+    def test_attachment_str(self):
+        """Test the string representation of Attachment model"""
+        attachment = Attachment.objects.create(
+            task=self.task, file="testfile.txt"
+        )
+        expected_str = f"Attachment for {self.task.title}"
+        self.assertEqual(str(attachment), expected_str)
+
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
 class TaskSignalTests(APITestCase):
@@ -381,3 +392,151 @@ class TaskSignalTests(APITestCase):
 
         # No email should be sent as there are no commenters
         self.assertEqual(len(mail.outbox), 0)
+
+
+class SendWeeklyReportTests(APITestCase):
+    fixtures = ["users", "tasks"]
+
+    def setUp(self):
+        # Ensure emails are cleared before each test
+        mail.outbox = []
+
+        # Create time logs within the past week for both users
+        self.user1 = User.objects.get(pk=1)
+        self.user2 = User.objects.get(pk=2)
+        self.task1 = Task.objects.get(pk=1)
+        self.task2 = Task.objects.get(pk=2)
+
+    def test_send_weekly_report(self):
+        # Create time logs that are not older than one week
+        now = timezone.now()
+        TimeLog.objects.create(
+            task=self.task1,
+            user=self.user2,
+            start_time=now - timedelta(days=3, hours=2),
+            end_time=now - timedelta(days=3),
+            note="Worked on fixing the bug.",
+            duration=timedelta(hours=2),
+        )
+        TimeLog.objects.create(
+            task=self.task2,
+            user=self.user1,
+            start_time=now - timedelta(days=5, hours=2),
+            end_time=now - timedelta(days=5),
+            note="Implemented API design.",
+            duration=timedelta(hours=2),
+        )
+        # Run the task
+        send_weekly_report()
+
+        # Check that an email was sent to each user
+        expected_emails_count = User.objects.filter(
+            user_time_logs__start_time__gte=timezone.now() - timedelta(days=7)).distinct().count()
+        self.assertEqual(len(mail.outbox), expected_emails_count)
+
+        # Check the email content
+        for user in User.objects.all():
+            self.assertIn(user.email, [msg.to[0] for msg in mail.outbox])
+            self.assertIn("Your Weekly Time Report", [msg.subject for msg in mail.outbox])
+
+    def test_send_weekly_report_no_time_logs_last_week(self):
+        # Create time logs that are older than one week
+        now = timezone.now()
+        TimeLog.objects.create(
+            task=self.task1,
+            user=self.user2,
+            start_time=now - timedelta(days=10, hours=2),
+            end_time=now - timedelta(days=10),
+            note="Worked on fixing the bug (older).",
+            duration=timedelta(hours=2),
+        )
+        TimeLog.objects.create(
+            task=self.task2,
+            user=self.user1,
+            start_time=now - timedelta(days=14, hours=2),
+            end_time=now - timedelta(days=14),
+            note="Implemented API design (older).",
+            duration=timedelta(hours=2),
+        )
+
+        # Run the task
+        send_weekly_report()
+
+        # No emails should be sent since there are no logs within the past week
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class TaskAttachmentsTests(APITestCase):
+    fixtures = ["users", "tasks"]
+
+    def setUp(self):
+        self.user = User.objects.get(pk=1)
+        self.task = Task.objects.get(pk=1)
+        self.client.force_authenticate(user=self.user)
+
+    def test_list_attachments(self):
+        """Test listing attachments for a task"""
+        url = reverse("tasks-attachments", kwargs={"pk": self.task.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 0)
+
+    def test_create_attachment(self):
+        """Test creating an attachment for a task"""
+        url = reverse("tasks-attachments", kwargs={"pk": self.task.pk})
+        with open("testfile.txt", "w") as f:
+            f.write("test content")
+        with open("testfile.txt", "rb") as f:
+            response = self.client.post(url, {"file": f}, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Attachment.objects.count(), 1)
+
+
+class TaskSearchTests(APITestCase):
+    fixtures = ["users", "tasks", "comments"]
+
+    def setUp(self):
+        self.user = User.objects.get(pk=1)
+        self.task = Task.objects.get(pk=1)
+        self.client.force_authenticate(user=self.user)
+
+    def test_search_existing_tasks(self):
+        """Test searching for existing tasks"""
+        url = reverse("search-tasks")
+        response = self.client.get(url, {"search": "API"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(
+            response.data["results"][0]["title"], "Design API for Comments"
+        )
+
+    def test_search_newly_created_task(self):
+        """Test searching for newly created tasks"""
+        Task.objects.create(
+            title="New Task",
+            description="New task description",
+            owner=self.user,
+            executor=self.user,
+        )
+        url = reverse("search-tasks")
+        response = self.client.get(url, {"search": "New Task"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["title"], "New Task")
+
+    def test_search_existing_comments(self):
+        """Test searching for existing comments"""
+        url = reverse("search-comments")
+        response = self.client.get(url, {"search": "API"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["text"], "API design looks good.")
+
+    def test_search_newly_created_comment(self):
+        """Test searching for newly created comments"""
+        Comment.objects.create(task=self.task, text="New Comment", user=self.user)
+        url = reverse("search-comments")
+        response = self.client.get(url, {"search": "New Comment"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["text"], "New Comment")

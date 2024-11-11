@@ -156,7 +156,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     @action(
         detail=True,
         url_path="attachments",
-        url_name="task_attachments",
+        url_name="attachments",
         parser_classes=[parsers.MultiPartParser],
     )
     def list_attachments(self, request, pk=None):
@@ -285,13 +285,9 @@ class BaseSearchViewSet(viewsets.GenericViewSet):
 
         # Paginate the queryset if needed
         page = self.paginate_queryset(response_queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
 
-        # Serialize the entire response if pagination is not used
-        serializer = self.get_serializer(response_queryset, many=True)
-        return Response(serializer.data)
+        serializer = self.get_serializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
 
 
 class TaskSearchViewSet(BaseSearchViewSet):
