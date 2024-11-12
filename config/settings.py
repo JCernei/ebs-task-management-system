@@ -255,14 +255,17 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
-REDIRECT_URI = os.getenv("REDIRECT_URI")
-GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
+REDIRECT_URI = os.getenv(
+    "REDIRECT_URI", "http://127.0.0.1:8000/users/login/github/callback/"
+)
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID", "Ov23liBclvLrOPhEcPqX")
+GITHUB_SECRET = os.getenv("CLIENT_SECRET", "6a20821e04b5129e9e8f5ccc5d76f3c564af5630")
 
 SOCIALACCOUNT_PROVIDERS = {
     "github": {
         "APP": {
-            "client_id": f"{os.getenv("GITHUB_CLIENT_ID")}",
-            "secret": f"{os.getenv("GITHUB_SECRET")}",
+            "client_id": GITHUB_CLIENT_ID,
+            "secret": GITHUB_SECRET,
             "key": "",
             "redirect_uri": REDIRECT_URI,
         }

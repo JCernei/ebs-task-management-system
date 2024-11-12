@@ -11,6 +11,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.users.authentication.context import AuthenticationContext
+from apps.users.authentication.strategies import GithubAuthenticationStrategy
 from apps.users.models import User
 from apps.users.serializers import (
     UserSerializer,
@@ -72,26 +74,47 @@ class GitHubLoginRedirectView(GenericAPIView):
 
 
 class GithubAuthCallbackView(SocialLoginView):
-    authentication_classes = ()
-    permission_classes = (AllowAny,)
-    adapter_class = GitHubOAuth2Adapter
-    client_class = OAuth2Client
-    callback_url = settings.REDIRECT_URI
+    authentication_classes = []
+    permission_classes = []
     http_method_names = ["get"]
 
     @extend_schema(description="Get Github auth code")
     def get(self, request, *args, **kwargs):
+        strategy = GithubAuthenticationStrategy()
+        context = AuthenticationContext(strategy)
+        return context.authenticate(request)
+
+
+class AuthenticationView(GenericAPIView):
+    def post(self, request: Request) -> Response:
+        # Check if the request is for GitHub authentication
+        if request.data.get("strategy") == "github":
+            return self.handle_github_auth(request)
+
+        # Otherwise, use the AuthenticationContext to handle the authentication
+        auth_context = AuthenticationContext
+        strategy_name = request.data.get("strategy", "email_password")
+        response, success = auth_context.authenticate(request, strategy_name)
+
+        if success:
+            return response
+        else:
+            return response
+
+    def handle_github_auth(self, request: Request) -> Response:
         code = request.query_params.get("code")
         if not code:
             return Response({"detail": "No authorization code provided"}, status=400)
 
         request.data["code"] = code
-        response = super().post(request, *args, **kwargs)
+        adapter_class = GitHubOAuth2Adapter
+        client_class = OAuth2Client
+        callback_url = settings.REDIRECT_URI
 
-        if response.status_code == 200:
-            refresh = RefreshToken.for_user(request.user)
-            return Response(
-                {"refresh": str(refresh), "access": str(refresh.access_token)}
-            )
-
-        return Response({"detail": "Failed to authenticate with GitHub"}, status=400)
+        # Use the dj-rest-auth SocialLoginView to handle the GitHub authentication
+        view = SocialLoginView.as_view(
+            adapter_class=adapter_class,
+            client_class=client_class,
+            callback_url=callback_url,
+        )
+        return view(request)
