@@ -106,26 +106,28 @@ class GitHubLoginRedirectViewTestCase(APITestCase):
 
 
 class GithubAuthCallbackViewTestCase(APITestCase):
+    def setUp(self):
+        self.url = reverse("github_auth_callback")
+
     @patch("apps.users.views.SocialLoginView.post")
-    def test_github_auth_callback_with_code(self, mock_post):
+    def test_github_auth_callback_with_valid_code(self, mock_post):
         mock_post.return_value.status_code = 200
-
-        url = reverse("github_auth_callback")
-        response = self.client.get(url, {"code": "test_code"})
-
+        response = self.client.get(self.url, {"code": "valid_code"})
         self.assertEqual(response.status_code, 200)
         self.assertIn("refresh", response.data)
         self.assertIn("access", response.data)
         mock_post.assert_called_once()
 
     @patch("apps.users.views.SocialLoginView.post")
-    def test_github_auth_callback_without_code(self, mock_post):
+    def test_github_auth_callback_with_invalid_code(self, mock_post):
         mock_post.return_value.status_code = 400
-        mock_post.return_value.data = "No authorization code provided"
-
-        url = reverse("github_auth_callback")
-        response = self.client.get(url)
-
+        response = self.client.get(self.url, {"code": "invalid_code"})
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data, "No authorization code provided")
-        mock_post.assert_called_once()
+        self.assertEqual(
+            response.data, {"detail": "Failed to authenticate with GitHub"}
+        )
+
+    def test_github_auth_callback_without_code(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, {"detail": "No authorization code provided"})

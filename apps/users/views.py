@@ -81,7 +81,11 @@ class GithubAuthCallbackView(SocialLoginView):
 
     @extend_schema(description="Get Github auth code")
     def get(self, request, *args, **kwargs):
-        request.data["code"] = request.query_params.get("code")
+        code = request.query_params.get("code")
+        if not code:
+            return Response({"detail": "No authorization code provided"}, status=400)
+
+        request.data["code"] = code
         response = super().post(request, *args, **kwargs)
 
         if response.status_code == 200:
@@ -90,4 +94,4 @@ class GithubAuthCallbackView(SocialLoginView):
                 {"refresh": str(refresh), "access": str(refresh.access_token)}
             )
 
-        return Response("No authorization code provided", status=400)
+        return Response({"detail": "Failed to authenticate with GitHub"}, status=400)
