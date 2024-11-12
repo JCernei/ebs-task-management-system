@@ -52,10 +52,14 @@ services:
       - static_volume:/app/static
       - media_volume:/app/media
     depends_on:
-      - db
-      - redis
-      - minio
-      - elasticsearch
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     env_file:
       - .env
 
