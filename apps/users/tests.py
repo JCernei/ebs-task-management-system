@@ -1,3 +1,6 @@
+from unittest.mock import patch
+
+from django.conf import settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -91,3 +94,40 @@ class UserListTestCase(APITestCase):
 
         # Assert that the user list request is forbidden for unauthenticated users
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class GitHubLoginRedirectViewTestCase(APITestCase):
+    def test_github_login_redirect(self):
+        url = reverse("github_login_redirect")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, settings.GITHUB_AUTH_REDIRECT)
+
+
+class GithubAuthCallbackViewTestCase(APITestCase):
+    def setUp(self):
+        self.url = reverse("github_auth_callback")
+
+    @patch("apps.users.views.SocialLoginView.post")
+    def test_github_auth_callback_with_valid_code(self, mock_post):
+        mock_post.return_value.status_code = 200
+        response = self.client.get(self.url, {"code": "valid_code"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("refresh", response.data)
+        self.assertIn("access", response.data)
+        mock_post.assert_called_once()
+
+    @patch("apps.users.views.SocialLoginView.post")
+    def test_github_auth_callback_with_invalid_code(self, mock_post):
+        mock_post.return_value.status_code = 400
+        response = self.client.get(self.url, {"code": "invalid_code"})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data, {"detail": "Failed to authenticate with GitHub"}
+        )
+
+    def test_github_auth_callback_without_code(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data, {"detail": "No authorization code provided"})

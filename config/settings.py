@@ -27,6 +27,7 @@ SECRET_KEY = os.environ.get(
     "SECRET_KEY", "django-insecure--5x)i0j6)wox$gs=$q@x$p8qymrw@$nsk)_aa48vo=)**d)n6("
 )
 
+API_HOST = os.getenv("API_HOST", "localhost")
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
 MAILHOG_HOST = os.getenv("MAILHOG_HOST", "localhost")
@@ -47,14 +48,20 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     # Third party apps
     "rest_framework",
+    "rest_framework.authtoken",
     "rest_framework_simplejwt",
     "django_filters",
-    # "corsheaders",
     "drf_spectacular",
     "django_minio_backend.apps.DjangoMinioBackendConfig",
     "django_elasticsearch_dsl",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.github",
+    "corsheaders",
     # Local apps
     "config",
     "apps.common",
@@ -63,6 +70,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -70,6 +78,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     # Local middleware
     "apps.common.middlewares.ApiMiddleware",
 ]
@@ -238,3 +247,63 @@ ELASTICSEARCH_DSL = {
         "http_auth": ("elastic", "LpHtxnsBqjxJjd=XqdL1"),
     }
 }
+
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+REDIRECT_URI = os.getenv("REDIRECT_URI")
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
+
+SOCIALACCOUNT_PROVIDERS = {
+    "github": {
+        "APP": {
+            "client_id": f"{os.getenv("GITHUB_CLIENT_ID")}",
+            "secret": f"{os.getenv("GITHUB_SECRET")}",
+            "key": "",
+            "redirect_uri": REDIRECT_URI,
+        }
+    }
+}
+
+ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+
+GITHUB_AUTH_REDIRECT = f"https://github.com/login/oauth/authorize?client_id={GITHUB_CLIENT_ID}&redirect_uri={REDIRECT_URI}&scope=user&response_type=code"
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_METHODS = [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+]
+CORS_ALLOW_HEADERS = (
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "token",
+    "cache-control",
+    "samesite",
+    "saas-secret-token",
+    "saas-app-token",
+)
+
+CSRF_TRUSTED_ORIGINS = [
+    f"http://{API_HOST}:8000",
+]
