@@ -33,6 +33,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: api
     command:
       - sh
       - -c

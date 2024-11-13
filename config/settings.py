@@ -37,7 +37,7 @@ ELASTIC_HOST = os.getenv("ELASTIC_HOST", "localhost")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "api"]
 
 # Application definition
 
@@ -203,6 +203,8 @@ MINIO_PRIVATE_BUCKETS = [
 ]
 
 MINIO_CONSISTENCY_CHECK_ON_START = True
+MINIO_NOTIFY_WEBHOOK_ENABLE_1 = "on"
+MINIO_NOTIFY_WEBHOOK_ENDPOINT_1 = f"http://{API_HOST}/minio/events"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -307,3 +309,25 @@ CORS_ALLOW_HEADERS = (
 CSRF_TRUSTED_ORIGINS = [
     f"http://{API_HOST}:8000",
 ]
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}

@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import Sum, DurationField, ExpressionWrapper, F
-from django_minio_backend import MinioBackend, iso_date_prefix
+from django_minio_backend import MinioBackend
 
 from apps.users.models import User
 
@@ -90,10 +90,22 @@ class TimeLog(models.Model):
 
 
 class Attachment(models.Model):
+    STATUS_CHOICES = [
+        ("Pending", "Pending Upload"),
+        ("Uploaded", "Uploaded"),
+        ("Failed", "Failed"),
+    ]
+
+    def custom_file_name(instance, filename):
+        return f"task_{instance.task_id}/{instance.id}_{filename}"
+
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attachments")
     file = models.FileField(
-        storage=MinioBackend(bucket_name="media"), upload_to=iso_date_prefix
+        storage=MinioBackend(bucket_name="media"), upload_to=custom_file_name
+    )
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="Pending Upload"
     )
 
     def __str__(self):
