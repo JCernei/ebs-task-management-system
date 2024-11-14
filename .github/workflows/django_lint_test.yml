@@ -83,7 +83,7 @@ jobs:
 
       - name: Copy coverage report from Docker to host
         run: |
-          docker cp ebs-task-management-system-api-1:/app/htmlcov ./htmlcov
+          docker cp api:/app/htmlcov ./htmlcov
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4

@@ -4,7 +4,6 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.db.models import Sum, F, ExpressionWrapper, DurationField
-from django.http import HttpResponseBadRequest
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -167,14 +166,21 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(attachments, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["post"], url_path="attachments/upload-url", url_name="generate-attachment-url")
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="attachments/upload-url",
+        url_name="generate-attachment-url",
+    )
     def generate_attachment_url(self, request, pk=None):
         task = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         validated_data = serializer.validated_data
 
-        attachment = Attachment.objects.create(task=task, user=validated_data["user"], file=None)
+        attachment = Attachment.objects.create(
+            task=task, user=validated_data["user"], file=None
+        )
         object_name = Attachment.custom_file_name(
             attachment, validated_data["file_name"]
         )
@@ -351,7 +357,9 @@ class WebhookListenerView(viewsets.GenericViewSet):
         task_id = file_path.split("/")[1].split("_")[1]
 
         if event_type == "s3:ObjectCreated:Put":
-            attachment = get_object_or_404(Attachment, file__endswith=file_name, task_id=task_id)
+            attachment = get_object_or_404(
+                Attachment, file__endswith=file_name, task_id=task_id
+            )
             attachment.status = "Uploaded"
             attachment.save()
             return Response({"detail": "Attachment status updated"}, status=200)
