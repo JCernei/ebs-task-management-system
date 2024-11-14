@@ -246,7 +246,6 @@ CELERY_BEAT_SCHEDULE = {
 ELASTICSEARCH_DSL = {
     "default": {
         "hosts": f"http://{ELASTIC_HOST}:9200",
-        "http_auth": ("elastic", "LpHtxnsBqjxJjd=XqdL1"),
     }
 }
 
@@ -309,25 +308,3 @@ CORS_ALLOW_HEADERS = (
 CSRF_TRUSTED_ORIGINS = [
     f"http://{API_HOST}:8000",
 ]
-
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "handlers": {
-        "console": {
-            "level": "DEBUG",
-            "class": "logging.StreamHandler",
-        },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
-    },
-    "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-    },
-}

@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import timedelta
 
 from django.conf import settings
@@ -166,7 +167,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(attachments, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["post"], url_path="attachments/upload-url", url_name="generate_attachment_url")
+    @action(detail=True, methods=["post"], url_path="attachments/upload-url", url_name="generate-attachment-url")
     def generate_attachment_url(self, request, pk=None):
         task = self.get_object()
         serializer = self.get_serializer(data=request.data)
@@ -343,24 +344,16 @@ class WebhookListenerView(viewsets.GenericViewSet):
     serializer_class = None
 
     def listen(self, request):
-        try:
-            payload = json.loads(request.body)
-            event_type = payload["EventName"]
-            file_path = payload["Key"]
-            file_name = os.path.basename(file_path)
-            task_id = file_path.split("/")[1].split("_")[1]
+        payload = json.loads(request.body)
+        event_type = payload["EventName"]
+        file_path = payload["Key"]
+        file_name = os.path.basename(file_path)
+        task_id = file_path.split("/")[1].split("_")[1]
 
-            if event_type == "s3:ObjectCreated:Put":
+        if event_type == "s3:ObjectCreated:Put":
+            attachment = get_object_or_404(Attachment, file__endswith=file_name, task_id=task_id)
+            attachment.status = "Uploaded"
+            attachment.save()
+            return Response({"detail": "Attachment status updated"}, status=200)
 
-                if not file_name:
-                    return Response({"detail": "Missing file_name"}, status=400)
-
-                attachment = get_object_or_404(Attachment, file__endswith=file_name, task_id=task_id)
-                attachment.status = "Uploaded"
-                attachment.save()
-                return Response({"detail": "Attachment status updated"}, status=200)
-
-            return Response({"detail": "Unknown event type"}, status=400)
-
-        except json.JSONDecodeError:
-            return HttpResponseBadRequest("Invalid JSON payload")
+        return Response({"detail": "Unknown event type"}, status=400)

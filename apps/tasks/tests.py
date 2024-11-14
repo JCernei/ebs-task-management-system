@@ -1,4 +1,6 @@
+import json
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.core import mail
 from django.test import override_settings
@@ -334,9 +336,7 @@ class TestTaskModelStr(APITestCase):
 
     def test_attachment_str(self):
         """Test the string representation of Attachment model"""
-        attachment = Attachment.objects.create(
-            task=self.task, file="testfile.txt"
-        )
+        attachment = Attachment.objects.create(task=self.task)
         expected_str = f"Attachment for {self.task.title}"
         self.assertEqual(str(attachment), expected_str)
 
@@ -476,20 +476,93 @@ class TaskAttachmentsTests(APITestCase):
 
     def test_list_attachments(self):
         """Test listing attachments for a task"""
+        Attachment.objects.create(task=self.task, user=self.user, file="media/task_1/1_example_file.txt",
+                                  status="Uploaded")
         url = reverse("tasks-attachments", kwargs={"pk": self.task.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
+        self.assertEqual(len(response.data), 1)
 
-    def test_create_attachment(self):
-        """Test creating an attachment for a task"""
-        url = reverse("tasks-attachments", kwargs={"pk": self.task.pk})
-        with open("testfile.txt", "w") as f:
-            f.write("test content")
-        with open("testfile.txt", "rb") as f:
-            response = self.client.post(url, {"file": f}, format="multipart")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    def test_generate_upload_url(self):
+        """Test generating an upload URL for a task's attachment."""
+        url = reverse("tasks-generate-attachment-url", kwargs={"pk": self.task.pk})
+        data = {"file_name": "example_file.txt"}
+
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("url", response.data)
+
+        # Ensure the attachment is created with a Pending status
+        attachment = Attachment.objects.get(task=self.task)
+        self.assertEqual(attachment.status, "Pending Upload")
+        self.assertIsNotNone(attachment.file)
+
+    @patch("apps.tasks.views.Minio.presigned_put_object")
+    def test_generate_upload_url_failure(self, mock_presigned_put_object):
+        """Test fail generating an upload URL for an attachment fails."""
+        mock_presigned_put_object.return_value = None
+        url = reverse("tasks-generate-attachment-url", kwargs={"pk": self.task.pk})
+        data = {"file_name": "example_file.txt"}
+        response = self.client.post(url, data)
+
+        # Assert that the response indicates failure
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data, {"error": "Could not generate pre-signed URL"})
+
+    def test_webhook_listener_updates_attachment_status(self):
+        """Test webhook listener for updating attachment status on S3 event."""
+        attachment = Attachment.objects.create(task=self.task, user=self.user, file="media/task_1/2_example_file.txt",
+                                               status="Pending Upload")
+        payload = {
+            "EventName": "s3:ObjectCreated:Put",
+            "Key": "media/task_1/2_example_file.txt",
+            "Records": [{
+                "s3": {
+                    "object": {
+                        "key": "task_1/2_example_file.txt",
+                    }
+                }
+            }]
+        }
+
+        url = reverse("webhook-listener")
+        response = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify that the attachment status was updated
+        attachment.refresh_from_db()
+        self.assertEqual(attachment.status, "Uploaded")
+
+    def test_webhook_listener_unknown_event(self):
+        """Test webhook listener for dealing with unknown S3 event."""
+        Attachment.objects.create(task=self.task, user=self.user, file="media/task_1/3_example_file.txt",
+                                  status="Uploaded")
+        payload = {
+            "EventName": "s3:ObjectCreated:Delete",
+            "Key": "media/task_1/3_example_file.txt",
+            "Records": [{
+                "s3": {
+                    "object": {
+                        "key": "task_1/3_example_file.txt",
+                    }
+                }
+            }]
+        }
+
+        url = reverse("webhook-listener")
+        response = self.client.post(url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"detail": "Unknown event type"})
+
+    def test_delete_task_cascade_attachments(self):
+        """Test deleting a task cascades to its attachments."""
+        Attachment.objects.create(task=self.task, user=self.user, file="example_file.txt")
         self.assertEqual(Attachment.objects.count(), 1)
+
+        url = reverse("tasks-detail", kwargs={"pk": self.task.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Attachment.objects.count(), 0)
 
 
 class TaskSearchTests(APITestCase):
