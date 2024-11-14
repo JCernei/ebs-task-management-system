@@ -34,21 +34,20 @@ def send_task_assigned_notification(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Comment)
 def send_comment_notification(sender, instance, created, **kwargs):
-    if created:
-        task = instance.task
-        commenter_name = instance.user.get_full_name()
-        comment_text = instance.text
-        send_task_commented_email.delay(
-            task.executor.email, task.title, commenter_name, comment_text
-        )
+    task = instance.task
+    commenter_name = instance.user.get_full_name()
+    comment_text = instance.text
+    send_task_commented_email.delay(
+        task.executor.email, task.title, commenter_name, comment_text
+    )
 
 
 @receiver(post_save, sender=Task)
 def send_task_completed_notification(sender, instance, **kwargs):
     if hasattr(instance, "_old_status"):
         if (
-            instance._old_status != STATUS_COMPLETED
-            and instance.status == STATUS_COMPLETED
+                instance._old_status != STATUS_COMPLETED
+                and instance.status == STATUS_COMPLETED
         ):
             commenters = (
                 Comment.objects.filter(task=instance)

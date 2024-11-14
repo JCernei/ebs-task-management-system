@@ -53,6 +53,10 @@ def send_weekly_report():
             end_time__gte=start_date,  # End time must be after the start date
         )
 
+        # Check if there are any time logs for the user
+        if not queryset.exists():
+            continue
+
         # Aggregate tasks data
         tasks = (
             queryset.values("task__id", "task__title")
