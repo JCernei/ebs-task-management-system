@@ -107,6 +107,7 @@ class Attachment(models.Model):
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="Pending Upload"
     )
+    name = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
         return f"Attachment for {self.task.title}"

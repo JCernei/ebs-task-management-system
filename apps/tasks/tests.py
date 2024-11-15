@@ -1,6 +1,5 @@
 import json
 from datetime import timedelta
-from unittest.mock import patch
 
 from django.core import mail
 from django.test import override_settings
@@ -494,6 +493,25 @@ class TaskAttachmentsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
 
+    def test_patch_attachment(self):
+        """Test updating an attachment's name"""
+        attachment = Attachment.objects.create(
+            task=self.task,
+            user=self.user,
+            file="media/task_1/1_example_file.txt",
+            status="Pending Upload",
+            name="example_file.txt",
+        )
+        url = reverse(
+            "tasks-attachments-update",
+            kwargs={"pk": self.task.pk, "attachment_id": attachment.pk},
+        )
+        data = {"name": "another_file_name.txt"}
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        attachment.refresh_from_db()
+        self.assertEqual(attachment.name, "another_file_name.txt")
+
     def test_generate_upload_url(self):
         """Test generating an upload URL for a task's attachment."""
         url = reverse("tasks-generate-attachment-url", kwargs={"pk": self.task.pk})
@@ -507,18 +525,6 @@ class TaskAttachmentsTests(APITestCase):
         attachment = Attachment.objects.get(task=self.task)
         self.assertEqual(attachment.status, "Pending Upload")
         self.assertIsNotNone(attachment.file)
-
-    @patch("apps.tasks.views.Minio.presigned_put_object")
-    def test_generate_upload_url_failure(self, mock_presigned_put_object):
-        """Test fail generating an upload URL for an attachment fails."""
-        mock_presigned_put_object.return_value = None
-        url = reverse("tasks-generate-attachment-url", kwargs={"pk": self.task.pk})
-        data = {"file_name": "example_file.txt"}
-        response = self.client.post(url, data)
-
-        # Assert that the response indicates failure
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.data, {"error": "Could not generate pre-signed URL"})
 
     def test_webhook_listener_updates_attachment_status(self):
         """Test webhook listener for updating attachment status on S3 event."""

@@ -3,12 +3,12 @@ import os
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.db.models import Sum, F, ExpressionWrapper, DurationField
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
-from minio import Minio
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
@@ -65,7 +65,11 @@ class TaskViewSet(viewsets.ModelViewSet):
             return TimeLogListSerializer
         elif self.action == "create_logs":
             return TimeLogCreateSerializer
-        elif self.action in ["list_attachments", "generate_attachment_url"]:
+        elif self.action in [
+            "list_attachments",
+            "generate_attachment_url",
+            "update_attachment",
+        ]:
             return AttachmentSerializer
         return TaskSerializer
 
@@ -168,6 +172,19 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=True,
+        methods=["patch"],
+        url_path="attachments/(?P<attachment_id>[^/.]+)",
+        url_name="attachments-update",
+    )
+    def update_attachment(self, request, pk=None, attachment_id=None):
+        attachment = get_object_or_404(Attachment, id=attachment_id)
+        serializer = self.get_serializer(attachment, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @action(
+        detail=True,
         methods=["post"],
         url_path="attachments/upload-url",
         url_name="generate-attachment-url",
@@ -176,35 +193,18 @@ class TaskViewSet(viewsets.ModelViewSet):
         task = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
 
-        attachment = Attachment.objects.create(
-            task=task, user=validated_data["user"], file=None
-        )
-        object_name = Attachment.custom_file_name(
-            attachment, validated_data["file_name"]
-        )
-
-        minio_client = Minio(
-            settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            secure=settings.MINIO_USE_HTTPS,
-        )
-
-        bucket_name = settings.MINIO_MEDIA_FILES_BUCKET
-
-        url = minio_client.presigned_put_object(
-            bucket_name=bucket_name,
+        instance = serializer.save(task=task)
+        object_name = Attachment.custom_file_name(instance, instance.name)
+        url = default_storage.client.presigned_put_object(
+            bucket_name=settings.MINIO_MEDIA_FILES_BUCKET,
             object_name=object_name,
             expires=timedelta(seconds=3600),
         )
 
-        if url:
-            attachment.file = object_name
-            attachment.save()
-            return Response({"url": url})
-        return Response({"error": "Could not generate pre-signed URL"}, status=500)
+        instance.file = object_name
+        instance.save()
+        return Response({"url": url})
 
 
 class ReportViewSet(viewsets.GenericViewSet):
