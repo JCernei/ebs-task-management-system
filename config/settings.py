@@ -37,7 +37,7 @@ ELASTIC_HOST = os.getenv("ELASTIC_HOST", "localhost")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "api"]
 
 # Application definition
 
@@ -203,6 +203,8 @@ MINIO_PRIVATE_BUCKETS = [
 ]
 
 MINIO_CONSISTENCY_CHECK_ON_START = True
+MINIO_NOTIFY_WEBHOOK_ENABLE_1 = "on"
+MINIO_NOTIFY_WEBHOOK_ENDPOINT_1 = f"http://{API_HOST}/minio/events"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -244,7 +246,6 @@ CELERY_BEAT_SCHEDULE = {
 ELASTICSEARCH_DSL = {
     "default": {
         "hosts": f"http://{ELASTIC_HOST}:9200",
-        "http_auth": ("elastic", "LpHtxnsBqjxJjd=XqdL1"),
     }
 }
 

@@ -122,12 +122,11 @@ class ReportSerializer(serializers.Serializer):
 
 class AttachmentSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    file = serializers.FileField()
 
     class Meta:
         model = Attachment
-        fields = ["id", "user", "file"]
-        read_only_fields = ["id"]
+        fields = ["id", "name", "status", "user", "file"]
+        read_only_fields = ["status", "user", "file", "id"]
 
 
 class TaskDocumentSerializer(serializers.ModelSerializer):

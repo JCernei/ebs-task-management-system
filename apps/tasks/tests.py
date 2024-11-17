@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 
 from django.core import mail
@@ -334,9 +335,7 @@ class TestTaskModelStr(APITestCase):
 
     def test_attachment_str(self):
         """Test the string representation of Attachment model"""
-        attachment = Attachment.objects.create(
-            task=self.task, file="testfile.txt"
-        )
+        attachment = Attachment.objects.create(task=self.task)
         expected_str = f"Attachment for {self.task.title}"
         self.assertEqual(str(attachment), expected_str)
 
@@ -430,14 +429,21 @@ class SendWeeklyReportTests(APITestCase):
         send_weekly_report()
 
         # Check that an email was sent to each user
-        expected_emails_count = User.objects.filter(
-            user_time_logs__start_time__gte=timezone.now() - timedelta(days=7)).distinct().count()
+        expected_emails_count = (
+            User.objects.filter(
+                user_time_logs__start_time__gte=timezone.now() - timedelta(days=7)
+            )
+            .distinct()
+            .count()
+        )
         self.assertEqual(len(mail.outbox), expected_emails_count)
 
         # Check the email content
         for user in User.objects.all():
             self.assertIn(user.email, [msg.to[0] for msg in mail.outbox])
-            self.assertIn("Your Weekly Time Report", [msg.subject for msg in mail.outbox])
+            self.assertIn(
+                "Your Weekly Time Report", [msg.subject for msg in mail.outbox]
+            )
 
     def test_send_weekly_report_no_time_logs_last_week(self):
         # Create time logs that are older than one week
@@ -476,20 +482,122 @@ class TaskAttachmentsTests(APITestCase):
 
     def test_list_attachments(self):
         """Test listing attachments for a task"""
+        Attachment.objects.create(
+            task=self.task,
+            user=self.user,
+            file="media/task_1/1_example_file.txt",
+            status="Uploaded",
+        )
         url = reverse("tasks-attachments", kwargs={"pk": self.task.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 0)
+        self.assertEqual(len(response.data), 1)
 
-    def test_create_attachment(self):
-        """Test creating an attachment for a task"""
-        url = reverse("tasks-attachments", kwargs={"pk": self.task.pk})
-        with open("testfile.txt", "w") as f:
-            f.write("test content")
-        with open("testfile.txt", "rb") as f:
-            response = self.client.post(url, {"file": f}, format="multipart")
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    def test_patch_attachment(self):
+        """Test updating an attachment's name"""
+        attachment = Attachment.objects.create(
+            task=self.task,
+            user=self.user,
+            file="media/task_1/1_example_file.txt",
+            status="Pending Upload",
+            name="example_file.txt",
+        )
+        url = reverse(
+            "tasks-attachments-update",
+            kwargs={"pk": self.task.pk, "attachment_id": attachment.pk},
+        )
+        data = {"name": "another_file_name.txt"}
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        attachment.refresh_from_db()
+        self.assertEqual(attachment.name, "another_file_name.txt")
+
+    def test_generate_upload_url(self):
+        """Test generating an upload URL for a task's attachment."""
+        url = reverse("tasks-generate-attachment-url", kwargs={"pk": self.task.pk})
+        data = {"file_name": "example_file.txt"}
+
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("url", response.data)
+
+        # Ensure the attachment is created with a Pending status
+        attachment = Attachment.objects.get(task=self.task)
+        self.assertEqual(attachment.status, "Pending Upload")
+        self.assertIsNotNone(attachment.file)
+
+    def test_webhook_listener_updates_attachment_status(self):
+        """Test webhook listener for updating attachment status on S3 event."""
+        attachment = Attachment.objects.create(
+            task=self.task,
+            user=self.user,
+            file="media/task_1/2_example_file.txt",
+            status="Pending Upload",
+        )
+        payload = {
+            "EventName": "s3:ObjectCreated:Put",
+            "Key": "media/task_1/2_example_file.txt",
+            "Records": [
+                {
+                    "s3": {
+                        "object": {
+                            "key": "task_1/2_example_file.txt",
+                        }
+                    }
+                }
+            ],
+        }
+
+        url = reverse("webhook-listener")
+        response = self.client.post(
+            url, data=json.dumps(payload), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Verify that the attachment status was updated
+        attachment.refresh_from_db()
+        self.assertEqual(attachment.status, "Uploaded")
+
+    def test_webhook_listener_unknown_event(self):
+        """Test webhook listener for dealing with unknown S3 event."""
+        Attachment.objects.create(
+            task=self.task,
+            user=self.user,
+            file="media/task_1/3_example_file.txt",
+            status="Uploaded",
+        )
+        payload = {
+            "EventName": "s3:ObjectCreated:Delete",
+            "Key": "media/task_1/3_example_file.txt",
+            "Records": [
+                {
+                    "s3": {
+                        "object": {
+                            "key": "task_1/3_example_file.txt",
+                        }
+                    }
+                }
+            ],
+        }
+
+        url = reverse("webhook-listener")
+        response = self.client.post(
+            url, data=json.dumps(payload), content_type="application/json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"detail": "Unknown event type"})
+
+    def test_delete_task_cascade_attachments(self):
+        """Test deleting a task cascades to its attachments."""
+        Attachment.objects.create(
+            task=self.task, user=self.user, file="example_file.txt"
+        )
         self.assertEqual(Attachment.objects.count(), 1)
+
+        url = reverse("tasks-detail", kwargs={"pk": self.task.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Attachment.objects.count(), 0)
 
 
 class TaskSearchTests(APITestCase):

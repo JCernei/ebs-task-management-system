@@ -46,8 +46,8 @@ def send_comment_notification(sender, instance, created, **kwargs):
 def send_task_completed_notification(sender, instance, **kwargs):
     if hasattr(instance, "_old_status"):
         if (
-                instance._old_status != STATUS_COMPLETED
-                and instance.status == STATUS_COMPLETED
+            instance._old_status != STATUS_COMPLETED
+            and instance.status == STATUS_COMPLETED
         ):
             commenters = (
                 Comment.objects.filter(task=instance)

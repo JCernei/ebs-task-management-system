@@ -6,11 +6,17 @@ from apps.tasks.views import (
     ReportViewSet,
     TaskSearchViewSet,
     CommentSearchViewSet,
+    WebhookListenerView,
 )
 
 router = DefaultRouter(trailing_slash=False)
 router.register(r"tasks", TaskViewSet, basename="tasks")
 urlpatterns = [
+    path(
+        "minio/events",
+        WebhookListenerView.as_view({"post": "listen"}),
+        name="webhook-listener",
+    ),
     path(
         "search/tasks", TaskSearchViewSet.as_view({"get": "list"}), name="search-tasks"
     ),

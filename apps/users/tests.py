@@ -99,14 +99,14 @@ class UserListTestCase(APITestCase):
 
     def test_user_list_pagination(self):
         url = reverse("user_list")
-        response = self.client.get(url, {'page': 1})
+        response = self.client.get(url, {"page": 1})
 
         # Assert that the user list request is successful and paginated
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('results', response.data)
-        self.assertIn('count', response.data)
-        self.assertIn('next', response.data)
-        self.assertIn('previous', response.data)
+        self.assertIn("results", response.data)
+        self.assertIn("count", response.data)
+        self.assertIn("next", response.data)
+        self.assertIn("previous", response.data)
 
     def test_user_list(self):
         url = reverse("user_list")

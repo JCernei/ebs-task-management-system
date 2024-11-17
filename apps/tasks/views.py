@@ -1,9 +1,15 @@
+import json
+import os
+from datetime import timedelta
+
+from django.conf import settings
+from django.core.files.storage import default_storage
 from django.db.models import Sum, F, ExpressionWrapper, DurationField
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, filters, parsers
+from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -59,7 +65,11 @@ class TaskViewSet(viewsets.ModelViewSet):
             return TimeLogListSerializer
         elif self.action == "create_logs":
             return TimeLogCreateSerializer
-        elif self.action in ["list_attachments", "create_attachment"]:
+        elif self.action in [
+            "list_attachments",
+            "generate_attachment_url",
+            "update_attachment",
+        ]:
             return AttachmentSerializer
         return TaskSerializer
 
@@ -153,25 +163,48 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(active_timer)
         return Response(serializer.data, status=200)
 
-    @action(
-        detail=True,
-        url_path="attachments",
-        url_name="attachments",
-        parser_classes=[parsers.MultiPartParser],
-    )
+    @action(detail=True, url_path="attachments", url_name="attachments")
     def list_attachments(self, request, pk=None):
         task = self.get_object()
         attachments = Attachment.objects.filter(task=task)
         serializer = self.get_serializer(attachments, many=True)
         return Response(serializer.data)
 
-    @list_attachments.mapping.post
-    def create_attachment(self, request, pk=None):
+    @action(
+        detail=True,
+        methods=["patch"],
+        url_path="attachments/(?P<attachment_id>[^/.]+)",
+        url_name="attachments-update",
+    )
+    def update_attachment(self, request, pk=None, attachment_id=None):
+        attachment = get_object_or_404(Attachment, id=attachment_id)
+        serializer = self.get_serializer(attachment, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="attachments/upload-url",
+        url_name="generate-attachment-url",
+    )
+    def generate_attachment_url(self, request, pk=None):
         task = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(task=task)
-        return Response(serializer.data, status=201)
+
+        instance = serializer.save(task=task)
+        object_name = Attachment.custom_file_name(instance, instance.name)
+        url = default_storage.client.presigned_put_object(
+            bucket_name=settings.MINIO_MEDIA_FILES_BUCKET,
+            object_name=object_name,
+            expires=timedelta(seconds=3600),
+        )
+
+        instance.file = object_name
+        instance.save()
+        return Response({"url": url})
 
 
 class ReportViewSet(viewsets.GenericViewSet):
@@ -310,3 +343,25 @@ class CommentSearchViewSet(BaseSearchViewSet):
     serializer_class = CommentDocumentSerializer
     search_fields = ["text"]
     document_class = CommentDocument
+
+
+class WebhookListenerView(viewsets.GenericViewSet):
+    permission_classes = []
+    serializer_class = None
+
+    def listen(self, request):
+        payload = json.loads(request.body)
+        event_type = payload["EventName"]
+        file_path = payload["Key"]
+        file_name = os.path.basename(file_path)
+        task_id = file_path.split("/")[1].split("_")[1]
+
+        if event_type == "s3:ObjectCreated:Put":
+            attachment = get_object_or_404(
+                Attachment, file__endswith=file_name, task_id=task_id
+            )
+            attachment.status = "Uploaded"
+            attachment.save()
+            return Response({"detail": "Attachment status updated"}, status=200)
+
+        return Response({"detail": "Unknown event type"}, status=400)
