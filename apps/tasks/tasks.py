@@ -3,11 +3,14 @@ from datetime import timedelta
 from celery import shared_task
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.files.storage import default_storage
 from django.core.mail import send_mail
 from django.db.models import F, Sum, DurationField, ExpressionWrapper
 from django.template.loader import render_to_string
 from django.utils import timezone
-from apps.tasks.models import TimeLog
+from minio.error import S3Error
+
+from apps.tasks.models import TimeLog, Attachment
 
 
 @shared_task
@@ -106,3 +109,44 @@ def send_weekly_report():
             html_message=html_content,
             fail_silently=False,
         )
+
+
+def process_attachment(attachment):
+    minio_client = default_storage.client
+    bucket_name = settings.MINIO_MEDIA_FILES_BUCKET
+
+    object_name = attachment.file.name
+    try:
+        object_stats = minio_client.stat_object(bucket_name, object_name)
+    except S3Error:
+        attachment.delete()
+        return True, False
+
+    if object_stats.size > 0:
+        attachment.status = "Uploaded"
+        attachment.save(update_fields=["status"])
+        return False, True
+
+    minio_client.remove_object(bucket_name, object_name)
+    attachment.delete()
+    return True, False
+
+
+@shared_task
+def clean_pending_uploads():
+    threshold_time = timezone.now() - timedelta(days=1)
+
+    pending_attachments = Attachment.objects.filter(
+        status="Pending Upload", created_at__lt=threshold_time
+    )
+
+    deleted_count = 0
+    updated_count = 0
+    for attachment in pending_attachments:
+        was_deleted, was_updated = process_attachment(attachment=attachment)
+        if was_deleted:
+            deleted_count += 1
+        if was_updated:
+            updated_count += 1
+
+    return f"Pending: {len(pending_attachments)} , Deleted: {deleted_count}, Updated: {updated_count}"

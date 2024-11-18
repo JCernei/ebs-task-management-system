@@ -240,7 +240,11 @@ CELERY_BEAT_SCHEDULE = {
     "send-weekly-reports": {
         "task": "apps.tasks.tasks.send_weekly_report",
         "schedule": crontab(hour="8", minute="0", day_of_week="1"),  # Monday at 8 AM
-    }
+    },
+    "clean-pending-uploads-daily": {
+        "task": "apps.tasks.tasks.clean_pending_uploads",
+        "schedule": crontab(hour="0", minute="0"),  # Daily at midnight
+    },
 }
 
 ELASTICSEARCH_DSL = {
