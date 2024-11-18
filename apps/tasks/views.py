@@ -39,7 +39,12 @@ from apps.tasks.serializers import (
 
 class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Task.objects.all().order_by("id")
+    queryset = (
+        Task.objects.all()
+        .order_by("id")
+        .prefetch_related("attachments", "comments", "time_logs")
+        .select_related("owner", "executor")
+    )
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = TaskFilter
     search_fields = ["title"]

@@ -32,16 +32,6 @@ class TaskListSerializer(serializers.ModelSerializer):
         fields = ["id", "title", "logged_time"]
 
 
-class TaskDetailSerializer(serializers.ModelSerializer):
-    owner = UserSerializer(read_only=True)
-    executor = UserSerializer(read_only=True)
-    logged_time = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = Task
-        fields = "__all__"
-
-
 class TaskUpdateSerializer(serializers.ModelSerializer):
     status = serializers.ChoiceField(choices=Task.STATUS_CHOICES, required=False)
     executor = serializers.PrimaryKeyRelatedField(
@@ -138,4 +128,17 @@ class TaskDocumentSerializer(serializers.ModelSerializer):
 class CommentDocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
+        fields = "__all__"
+
+
+class TaskDetailSerializer(serializers.ModelSerializer):
+    owner = UserSerializer(read_only=True)
+    executor = UserSerializer(read_only=True)
+    logged_time = serializers.IntegerField(read_only=True)
+    attachments = AttachmentSerializer(many=True, read_only=True)
+    comments = CommentListSerializer(many=True, read_only=True)
+    time_logs = TimeLogListSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Task
         fields = "__all__"
