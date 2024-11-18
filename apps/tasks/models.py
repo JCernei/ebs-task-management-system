@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Sum, DurationField, ExpressionWrapper, F
+from django.utils import timezone
 from django_minio_backend import MinioBackend
 
 from apps.users.models import User
@@ -108,7 +109,7 @@ class Attachment(models.Model):
         max_length=20, choices=STATUS_CHOICES, default="Pending Upload"
     )
     name = models.CharField(max_length=200, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     size = models.PositiveIntegerField(null=True, blank=True)
 
     def __str__(self):

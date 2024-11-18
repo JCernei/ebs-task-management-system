@@ -1,15 +1,22 @@
 import json
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.core import mail
 from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
+from minio.error import S3Error
 from rest_framework import status
 from rest_framework.test import APITestCase
+from urllib3 import HTTPResponse
 
 from apps.tasks.models import Task, TimeLog, Comment, Attachment
-from apps.tasks.tasks import send_weekly_report
+from apps.tasks.tasks import (
+    send_weekly_report,
+    clean_pending_uploads,
+    process_attachment,
+)
 from apps.users.models import User
 
 
@@ -542,6 +549,7 @@ class TaskAttachmentsTests(APITestCase):
                     "s3": {
                         "object": {
                             "key": "task_1/2_example_file.txt",
+                            "size": 1024,
                         }
                     }
                 }
@@ -574,6 +582,7 @@ class TaskAttachmentsTests(APITestCase):
                     "s3": {
                         "object": {
                             "key": "task_1/3_example_file.txt",
+                            "size": 1024,
                         }
                     }
                 }
@@ -598,6 +607,40 @@ class TaskAttachmentsTests(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(Attachment.objects.count(), 0)
+
+    def test_attachment_report(self):
+        """Test generating a report of uploaded attachments."""
+        Attachment.objects.create(
+            task_id=1,
+            user=self.user,
+            file="media/task_1/file1.txt",
+            status="Uploaded",
+            size=2048,
+            created_at=timezone.now(),
+        )
+        Attachment.objects.create(
+            task_id=1,
+            user=self.user,
+            file="media/task_1/file2.txt",
+            status="Uploaded",
+            size=1024,
+            created_at=timezone.now(),
+        )
+        url = reverse("attachments-reports")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 1)  # One day of data
+        self.assertEqual(
+            response.data["results"][0]["total_volume_kb"], 3
+        )  # 2048 + 1024 bytes
+        self.assertEqual(response.data["results"][0]["total_files"], 2)
+
+    def test_attachment_report_empty(self):
+        """Test generating a report with no uploaded attachments."""
+        url = reverse("attachments-reports")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["results"]), 0)
 
 
 class TaskSearchTests(APITestCase):
@@ -648,3 +691,101 @@ class TaskSearchTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["text"], "New Comment")
+
+
+class CleanPendingUploadsTaskTests(APITestCase):
+    fixtures = ["users", "tasks"]
+
+    def setUp(self):
+        self.task = Task.objects.get(pk=1)
+        self.user = User.objects.get(pk=1)
+
+    @patch("apps.tasks.tasks.default_storage.client.stat_object")
+    @patch("apps.tasks.tasks.default_storage.client.remove_object")
+    def test_process_existing_attachment(self, mock_remove, mock_stat):
+        """Test processing an existing attachment with a valid size."""
+        attachment = Attachment.objects.create(
+            task=self.task,
+            user=self.user,
+            file="media/task_1/valid_file.txt",
+            status="Pending Upload",
+        )
+        mock_stat.return_value.size = 2048  # Mock the object size
+
+        was_deleted, was_updated = process_attachment(attachment)
+        attachment.refresh_from_db()
+        self.assertFalse(was_deleted)
+        self.assertTrue(was_updated)
+        self.assertEqual(attachment.status, "Uploaded")
+        mock_remove.assert_not_called()
+        mock_stat.assert_called_once()
+
+    @patch("apps.tasks.tasks.default_storage.client.stat_object")
+    def test_process_missing_attachment(self, mock_stat):
+        """Test processing a missing attachment (object not found)."""
+        attachment = Attachment.objects.create(
+            task=self.task,
+            user=self.user,
+            file="media/task_1/missing_file.txt",
+            status="Pending Upload",
+        )
+        mock_stat.side_effect = S3Error(
+            code="NoSuchKey",
+            message="The specified key does not exist.",
+            resource="media/task_1/missing_file.txt",
+            request_id="dummy-request-id",
+            host_id="dummy-host-id",
+            response=HTTPResponse(),
+        )
+
+        was_deleted, was_updated = process_attachment(attachment)
+        self.assertTrue(was_deleted)
+        self.assertFalse(was_updated)
+        self.assertFalse(Attachment.objects.filter(pk=attachment.pk).exists())
+
+    @patch("apps.tasks.tasks.default_storage.client.stat_object")
+    @patch("apps.tasks.tasks.default_storage.client.remove_object")
+    def test_process_zero_size_attachment(self, mock_remove, mock_stat):
+        """Test processing an attachment with a size of zero."""
+        attachment = Attachment.objects.create(
+            task=self.task,
+            user=self.user,
+            file="media/task_1/zero_size_file.txt",
+            status="Pending Upload",
+        )
+        mock_stat.return_value.size = 0  # Mock size 0
+
+        was_deleted, was_updated = process_attachment(attachment)
+        self.assertTrue(was_deleted)
+        self.assertFalse(was_updated)
+        self.assertFalse(Attachment.objects.filter(pk=attachment.pk).exists())
+        mock_remove.assert_called_once()
+
+    @patch("apps.tasks.tasks.process_attachment")
+    def test_clean_pending_uploads(self, mock_process):
+        """Test cleaning pending uploads older than threshold time."""
+        Attachment.objects.create(
+            task=self.task,
+            user=self.user,
+            file="media/task_1/old_file.txt",
+            status="Pending Upload",
+            created_at=timezone.now() - timedelta(days=2),
+            size=2048,
+        )
+
+        Attachment.objects.create(
+            task=self.task,
+            user=self.user,
+            file="media/task_1/recent_file.txt",
+            status="Pending Upload",
+            created_at=timezone.now() - timedelta(days=2),
+            size=1024,
+        )
+
+        mock_process.side_effect = [
+            (True, False),
+            (False, True),
+        ]
+        result = clean_pending_uploads()
+
+        self.assertEqual(result, "Pending: 2, Deleted: 1, Updated: 1")

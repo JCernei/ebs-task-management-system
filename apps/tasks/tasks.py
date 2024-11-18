@@ -134,10 +134,13 @@ def process_attachment(attachment):
 
 @shared_task
 def clean_pending_uploads():
-    threshold_time = timezone.now() - timedelta(days=1)
+    upper_threshold_time = timezone.now() - timedelta(days=1)
+    lower_threshold_time = timezone.now() - timedelta(days=3)
 
     pending_attachments = Attachment.objects.filter(
-        status="Pending Upload", created_at__lt=threshold_time
+        status="Pending Upload",
+        created_at__lt=upper_threshold_time,
+        created_at__gte=lower_threshold_time,
     )
 
     deleted_count = 0
@@ -149,4 +152,4 @@ def clean_pending_uploads():
         if was_updated:
             updated_count += 1
 
-    return f"Pending: {len(pending_attachments)} , Deleted: {deleted_count}, Updated: {updated_count}"
+    return f"Pending: {len(pending_attachments)}, Deleted: {deleted_count}, Updated: {updated_count}"
