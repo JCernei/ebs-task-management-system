@@ -142,3 +142,9 @@ class TaskDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = "__all__"
+
+
+class AttachmentReportSerializer(serializers.Serializer):
+    day = serializers.DateField()
+    files = serializers.IntegerField()
+    total_size = serializers.IntegerField()
