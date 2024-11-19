@@ -4,7 +4,8 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.files.storage import default_storage
-from django.db.models import Sum, F, ExpressionWrapper, DurationField
+from django.db.models import Sum, F, ExpressionWrapper, DurationField, Count
+from django.db.models.functions import TruncDay
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
@@ -34,12 +35,18 @@ from apps.tasks.serializers import (
     AttachmentSerializer,
     TaskDocumentSerializer,
     CommentDocumentSerializer,
+    AttachmentReportSerializer,
 )
 
 
 class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
-    queryset = Task.objects.all().order_by("id")
+    queryset = (
+        Task.objects.all()
+        .order_by("id")
+        .prefetch_related("attachments", "comments", "time_logs")
+        .select_related("owner", "executor")
+    )
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_class = TaskFilter
     search_fields = ["title"]
@@ -361,7 +368,25 @@ class WebhookListenerView(viewsets.GenericViewSet):
                 Attachment, file__endswith=file_name, task_id=task_id
             )
             attachment.status = "Uploaded"
+            attachment.size = payload["Records"][0]["s3"]["object"]["size"]
             attachment.save()
             return Response({"detail": "Attachment status updated"}, status=200)
 
         return Response({"detail": "Unknown event type"}, status=400)
+
+
+class AttachmentReportView(viewsets.GenericViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = Attachment.objects.all()
+    serializer_class = AttachmentReportSerializer
+
+    def list(self, request, *args, **kwargs):
+        report = (
+            Attachment.objects.filter(status="Uploaded")
+            .annotate(day=TruncDay("created_at"))
+            .values("day")
+            .annotate(total_volume_kb=Sum(F("size") / 1024), total_files=Count("id"))
+            .order_by("day")
+        )
+        page = self.paginate_queryset(report)
+        return self.get_paginated_response(page)

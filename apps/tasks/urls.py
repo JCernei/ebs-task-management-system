@@ -7,6 +7,7 @@ from apps.tasks.views import (
     TaskSearchViewSet,
     CommentSearchViewSet,
     WebhookListenerView,
+    AttachmentReportView,
 )
 
 router = DefaultRouter(trailing_slash=False)
@@ -26,5 +27,10 @@ urlpatterns = [
         name="search-comments",
     ),
     path("tasks/reports", ReportViewSet.as_view({"get": "list"}), name="tasks-reports"),
+    path(
+        "attachments/reports",
+        AttachmentReportView.as_view({"get": "list"}),
+        name="attachments-reports",
+    ),
     path("", include(router.urls)),
 ]
